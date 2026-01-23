@@ -6,27 +6,36 @@ import { PencilIcon } from './icons/PencilIcon';
 import { ImportIcon } from './icons/ImportIcon';
 import { ArrowRightIcon } from './icons/ArrowRightIcon';
 import { SpannerIcon } from './icons/SpannerIcon';
+import { CheckCircleIcon } from './icons/CheckCircleIcon';
 
 // A mapping of action names to their corresponding icons for visual distinction in the log.
 const actionIcons: { [key: string]: React.ReactElement } = {
     'Added Raw Material': <PlusIcon />,
     'Updated Raw Material': <PencilIcon />,
+    'Updated Storage Item': <PencilIcon />,
     'Imported Raw Materials': <ImportIcon />,
+    'Imported Storage Items': <ImportIcon />,
     'Started Production': <ArrowRightIcon />,
     'Finished Production': <ArrowRightIcon />,
     'Sent to Repair': <SpannerIcon />,
     'Item Repaired': <SpannerIcon />,
+    'Updated Test Results': <CheckCircleIcon />,
+    'Imported Test Results': <ImportIcon />,
 };
 
 // A mapping of action names to color styles to further differentiate log entry types.
 const actionColors: { [key: string]: string } = {
     'Added Raw Material': 'bg-blue-100 text-blue-800',
     'Updated Raw Material': 'bg-yellow-100 text-yellow-800',
+    'Updated Storage Item': 'bg-yellow-100 text-yellow-800',
     'Imported Raw Materials': 'bg-green-100 text-green-800',
+    'Imported Storage Items': 'bg-green-100 text-green-800',
     'Started Production': 'bg-indigo-100 text-indigo-800',
     'Finished Production': 'bg-green-100 text-green-800',
     'Sent to Repair': 'bg-red-100 text-red-800',
     'Item Repaired': 'bg-green-100 text-green-800',
+    'Updated Test Results': 'bg-purple-100 text-purple-800',
+    'Imported Test Results': 'bg-teal-100 text-teal-800',
 };
 
 interface ViewLogProps {
@@ -39,9 +48,13 @@ const ViewLog: React.FC<ViewLogProps> = ({ logs }) => {
 
   // Memoize the filtered logs to prevent re-calculation on every render.
   const filteredLogs = useMemo(() => {
-    if (!searchTerm) return logs;
+    // Sort logs by timestamp descending (Latest first)
+    const sortedLogs = [...logs].sort((a, b) => b.timestamp - a.timestamp);
+
+    if (!searchTerm) return sortedLogs;
+    
     const lowercasedFilter = searchTerm.toLowerCase();
-    return logs.filter(log => 
+    return sortedLogs.filter(log => 
       log.action.toLowerCase().includes(lowercasedFilter) || 
       log.details.toLowerCase().includes(lowercasedFilter) ||
       log.username.toLowerCase().includes(lowercasedFilter)
@@ -51,7 +64,7 @@ const ViewLog: React.FC<ViewLogProps> = ({ logs }) => {
   const handleCopyDailyLog = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dailyLogs = logs.filter(log => log.timestamp >= today.getTime());
+    const dailyLogs = filteredLogs.filter(log => log.timestamp >= today.getTime());
     
     if (dailyLogs.length === 0) {
         alert("No log entries for today to copy.");
@@ -113,7 +126,14 @@ const ViewLog: React.FC<ViewLogProps> = ({ logs }) => {
                   </div>
                   <p className="text-xs text-gray-500 flex-shrink-0 ml-4">{new Date(log.timestamp).toLocaleString()}</p>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">{log.details}</p>
+                <div className="text-sm text-gray-600 mt-1">
+                    {/* Parse details to highlight critical alerts like quantity changes */}
+                    {log.details.split(/(\[QUANTITY CHANGED:.*?\])/g).map((part, i) => 
+                        part.startsWith('[QUANTITY CHANGED') ? 
+                        <span key={i} className="font-bold text-red-600 bg-red-50 px-1 rounded border border-red-200 text-xs ml-1">{part}</span> : 
+                        part
+                    )}
+                </div>
               </div>
             </li>
           ))}

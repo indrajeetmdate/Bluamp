@@ -8,47 +8,45 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  persistent?: boolean;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md', persistent = false }) => {
   if (!isOpen) return null;
 
   const sizeClasses = {
     sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
-    xl: 'max-w-xl',
+    xl: 'max-w-3xl',
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-[#0D0D0D]/60 backdrop-blur-sm z-[100] flex justify-center items-center p-4 transition-all duration-300" onClick={() => !persistent && onClose()}>
       <div
-        className={`bg-white rounded-lg shadow-xl relative w-full ${sizeClasses[size]} transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-fade-in-scale`}
+        className={`bg-white rounded-3xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.4)] relative w-full ${sizeClasses[size]} overflow-hidden animate-fade-in-scale`}
         onClick={(e) => e.stopPropagation()}
-        style={{ animationName: 'fade-in-scale', animationDuration: '0.2s', animationFillMode: 'forwards' }}
       >
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
+        <div className="flex justify-between items-center px-8 py-6 bg-[#F9FAFB] border-b border-slate-100">
+          <h2 className="text-xl font-bold text-[#0D0D0D] tracking-tight font-brand">{title}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors rounded-full p-1"
+            className="text-slate-400 hover:text-[#0D0D0D] hover:bg-slate-200 transition-all rounded-full p-2"
           >
             <XIcon />
           </button>
         </div>
-        <div className="p-6 max-h-[80vh] overflow-y-auto">
+        <div className="p-8 max-h-[85vh] overflow-y-auto scrollbar-hide">
           {children}
         </div>
       </div>
        <style>{`
         @keyframes fade-in-scale {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
+          from { opacity: 0; transform: scale(0.97) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
         }
         .animate-fade-in-scale {
-          animation-name: fade-in-scale;
-          animation-duration: 0.2s;
-          animation-fill-mode: forwards;
+          animation: fade-in-scale 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
     </div>

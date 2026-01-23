@@ -1,367 +1,638 @@
 
-import React, { useState, useRef } from 'react';
-import type { ReceivedGood } from '../types';
-import { ReceivedGoodStatus } from '../types';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import type { ReceivedGood, WIPItem, FinishedGood, CompanyProfile, TestResult, User, ExtractedInvoice, Recipe } from '../types';
+import { ReceivedGoodStatus, EMPTY_INVOICE } from '../types';
 import Modal from './Modal';
 import { PlusIcon } from './icons/PlusIcon';
 import { PencilIcon } from './icons/PencilIcon';
+import { DuplicateIcon } from './icons/DuplicateIcon';
+import { ArrowRightIcon } from './icons/ArrowRightIcon';
+import { MergeIcon } from './icons/MergeIcon';
+import { RefreshCw, Trash2 } from './invoices/Icons';
 import { ImportIcon } from './icons/ImportIcon';
+import { SearchIcon } from './icons/SearchIcon';
 
 interface ReceivedGoodsProps {
   receivedGoods: ReceivedGood[];
   setReceivedGoods: React.Dispatch<React.SetStateAction<ReceivedGood[]>>;
+  recipes?: Recipe[];
+  setRecipes?: React.Dispatch<React.SetStateAction<Recipe[]>>;
   addLogEntry: (action: string, details: string) => void;
+  wipItems: WIPItem[];
+  setWipItems?: React.Dispatch<React.SetStateAction<WIPItem[]>>;
+  finishedGoods: FinishedGood[];
+  setFinishedGoods?: React.Dispatch<React.SetStateAction<FinishedGood[]>>;
+  companyProfiles: CompanyProfile[];
+  testResults: TestResult[];
+  setTestResults: React.Dispatch<React.SetStateAction<TestResult[]>>;
+  currentUser: User | null;
+  setView?: (view: any) => void;
+  setInvoiceDraft?: (draft: ExtractedInvoice) => void;
 }
 
 const statusInfo = {
-  [ReceivedGoodStatus.ND]: { text: 'Not Damaged', color: 'bg-green-100 text-green-800' },
-  [ReceivedGoodStatus.PR]: { text: 'Partially Received', color: 'bg-yellow-100 text-yellow-800' },
-  [ReceivedGoodStatus.D]: { text: 'Damaged', color: 'bg-red-100 text-red-800' },
-  [ReceivedGoodStatus.Other]: { text: 'Other', color: 'bg-gray-100 text-gray-800' },
+  [ReceivedGoodStatus.ND]: { text: 'Not Damaged', color: 'bg-[#A8BF75]/20 text-[#658C3E] border border-[#A8BF75]/50' },
+  [ReceivedGoodStatus.PR]: { text: 'Partially Received', color: 'bg-yellow-50 text-yellow-800 border border-yellow-200' },
+  [ReceivedGoodStatus.D]: { text: 'Damaged', color: 'bg-red-50 text-red-800 border border-red-200' },
+  [ReceivedGoodStatus.Other]: { text: 'Other', color: 'bg-gray-100 text-gray-800 border border-gray-200' },
 };
 
 const initialFormState: Omit<ReceivedGood, 'id' | 'timestamp' | 'serials'> & { serials: string[] } = {
-  name: '', makeModel: '', supplier: '', quantity: 0, status: ReceivedGoodStatus.ND, damagedCount: 0, invoiceNumber: '', serials: []
+  name: '', category: '', makeModel: '', supplier: '', quantity: 0, status: ReceivedGoodStatus.ND, damagedCount: 0, invoiceNumber: '', serials: []
 };
 
-const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({ receivedGoods, setReceivedGoods, addLogEntry }) => {
+const CATEGORIES = ['Cell', 'BMS', 'Bat-misc', 'Nickel Strip', 'Wire', 'Connector', 'Holder', 'Epoxy Sheet', 'Sleeve', 'Tape', 'Screw', 'Cabinet', 'Other'];
+const GRID_COLUMNS = ['serial', 'voltage', 'resistance', 'capacity'] as const;
+
+interface SerialGridRow {
+    serial: string;
+    voltage: string;
+    resistance: string;
+    capacity: string;
+}
+
+const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({ 
+    receivedGoods, setReceivedGoods, recipes, setRecipes, addLogEntry, 
+    wipItems, setWipItems, finishedGoods, setFinishedGoods, companyProfiles, 
+    testResults, setTestResults, currentUser, setView, setInvoiceDraft 
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGood, setEditingGood] = useState<ReceivedGood | null>(null);
   const [formData, setFormData] = useState(initialFormState);
-  const [serialsText, setSerialsText] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-
-  // State for Serial Number Generator
-  const [prefix, setPrefix] = useState('INV-2023-001');
-  const [startNumber, setStartNumber] = useState(50);
-  const [totalCount, setTotalCount] = useState(800);
-  const [generatedSerials, setGeneratedSerials] = useState('');
-  const [isCopied, setIsCopied] = useState(false);
-
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [serialEntries, setSerialEntries] = useState<SerialGridRow[]>([]);
+  const [prefix, setPrefix] = useState('');
+  const [startNumber, setStartNumber] = useState(1);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: name === 'quantity' || name === 'damagedCount' ? Number(value) : value }));
+  // Helper to determine if category requires serial tracking
+  const isTrackedCategory = (cat: string) => (cat || '').toLowerCase() === 'cell';
+
+  // Populate form when editing
+  useEffect(() => {
+    if (editingGood) {
+      setFormData({
+        name: editingGood.name,
+        category: editingGood.category,
+        makeModel: editingGood.makeModel,
+        supplier: editingGood.supplier,
+        quantity: editingGood.quantity,
+        status: editingGood.status as ReceivedGoodStatus,
+        damagedCount: editingGood.damagedCount,
+        invoiceNumber: editingGood.invoiceNumber,
+        serials: editingGood.serials,
+      });
+      
+      // Merge Serials with Test Results
+      if (isTrackedCategory(editingGood.category)) {
+          const entries: SerialGridRow[] = editingGood.serials.map(s => {
+              const tr = testResults.find(r => r.receivedGoodId === editingGood.id && r.serialNumber === s);
+              return {
+                  serial: s,
+                  voltage: tr?.voltage?.toString() || '',
+                  resistance: tr?.resistance?.toString() || '',
+                  capacity: tr?.capacity?.toString() || ''
+              };
+          });
+
+          // Fill remaining if quantity > serials count
+          if (entries.length < editingGood.quantity) {
+              const diff = editingGood.quantity - entries.length;
+              for(let i=0; i<diff; i++) entries.push({ serial: '', voltage: '', resistance: '', capacity: '' });
+          }
+          setSerialEntries(entries);
+      } else {
+          setSerialEntries([]);
+      }
+    } else {
+      setFormData(initialFormState);
+      setSerialEntries([]);
+    }
+  }, [editingGood, testResults]);
+
+  // Adjust serial entries when quantity changes (Only for Cell)
+  useEffect(() => {
+      if (!isTrackedCategory(formData.category)) return;
+
+      const qty = Number(formData.quantity) || 0;
+      setSerialEntries(prev => {
+          if (prev.length === qty) return prev;
+          if (prev.length < qty) {
+              return prev.slice(0, qty);
+          } else {
+              const diff = qty - prev.length;
+              return [...prev, ...Array(diff).fill({ serial: '', voltage: '', resistance: '', capacity: '' })];
+          }
+      });
+  }, [formData.quantity, formData.category]);
+
+  // Handle Inventory Import
+  useEffect(() => {
+    const checkImport = () => {
+        const pendingImport = localStorage.getItem('pendingInventoryImport');
+        if (pendingImport) {
+            try {
+                const items = JSON.parse(pendingImport);
+                if (Array.isArray(items) && items.length > 0) {
+                    setTimeout(() => {
+                        const confirmed = window.confirm(`Found ${items.length} items imported from Invoice Module. Add to storage?`);
+                        if (confirmed) {
+                            const newGoods: ReceivedGood[] = items.map((item: any, index: number) => {
+                                let statusEnum = ReceivedGoodStatus.ND;
+                                if (item.status === 'Damaged') statusEnum = ReceivedGoodStatus.D;
+                                else if (item.status === 'Partially Received') statusEnum = ReceivedGoodStatus.PR;
+                                
+                                return {
+                                    id: `rec-imp-${Date.now()}-${index}`,
+                                    timestamp: Date.now(),
+                                    name: item.name || 'Unknown Item',
+                                    category: item.category || 'Uncategorized',
+                                    makeModel: item.makeModel || '',
+                                    supplier: item.supplier || 'Unknown',
+                                    invoiceNumber: item.invoiceNumber || '',
+                                    quantity: Number(item.quantity) || 0,
+                                    status: statusEnum,
+                                    damagedCount: 0,
+                                    serials: []
+                                };
+                            });
+                            setReceivedGoods(prev => [...newGoods, ...prev]);
+                            addLogEntry('Imported Storage Items', `Imported ${newGoods.length} items from invoice scan.`);
+                        }
+                        localStorage.removeItem('pendingInventoryImport');
+                    }, 100);
+                } else {
+                    localStorage.removeItem('pendingInventoryImport');
+                }
+            } catch (e) {
+                console.error("Failed to parse import data", e);
+                localStorage.removeItem('pendingInventoryImport');
+            }
+        }
+    };
+    checkImport();
+  }, []);
+
+  const filteredGoods = receivedGoods.filter(good => {
+    const term = searchTerm.toLowerCase();
+    const matchesSearch = good.name.toLowerCase().includes(term) ||
+        (good.category || '').toLowerCase().includes(term) ||
+        (good.makeModel || '').toLowerCase().includes(term) ||
+        (good.invoiceNumber || '').toLowerCase().includes(term) ||
+        (good.supplier || '').toLowerCase().includes(term);
+    
+    const matchesCategory = selectedCategory === 'All' || good.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  }).sort((a, b) => b.timestamp - a.timestamp);
+
+  const handleEditClick = (good: ReceivedGood) => {
+      setEditingGood(good);
+      setIsModalOpen(true);
   };
 
-  const handleSerialsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setSerialsText(e.target.value);
+  const handleCreateNew = () => {
+      setEditingGood(null);
+      setFormData(initialFormState);
+      setSerialEntries([]);
+      setIsModalOpen(true);
   };
 
-  const handleOpenAddModal = () => {
-    setEditingGood(null);
-    setFormData(initialFormState);
-    setSerialsText('');
-    setIsModalOpen(true);
+  const handleAutoGenerate = () => {
+      const count = Number(formData.quantity) || 0;
+      setSerialEntries(prev => {
+          const newEntries = [...prev];
+          // Ensure length matches count before generating
+          if (newEntries.length < count) {
+              const diff = count - newEntries.length;
+              for(let k=0; k<diff; k++) newEntries.push({ serial: '', voltage: '', resistance: '', capacity: '' });
+          }
+          
+          for (let i = 0; i < count; i++) {
+              if (newEntries[i]) {
+                  newEntries[i] = {
+                      ...newEntries[i],
+                      serial: `${prefix}${Number(startNumber) + i}`
+                  };
+              }
+          }
+          return newEntries;
+      });
   };
 
-  const handleEdit = (good: ReceivedGood) => {
-    setEditingGood(good);
-    setFormData({
-        name: good.name,
-        makeModel: good.makeModel,
-        supplier: good.supplier,
-        quantity: good.quantity,
-        status: good.status,
-        damagedCount: good.damagedCount,
-        invoiceNumber: good.invoiceNumber,
-        serials: good.serials,
-    });
-    setSerialsText(good.serials.join('\n'));
-    setIsModalOpen(true);
+  // Smart Paste: Handles pasting a block of data starting from any cell
+  const handleGridPaste = (e: React.ClipboardEvent, startRowIndex: number, startColKey: keyof SerialGridRow) => {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text');
+        const rows = text.split(/\r?\n/).filter(line => line.trim() !== '');
+        
+        if (rows.length === 0) return;
+
+        // Auto-expand quantity if paste is larger than current table
+        let currentEntries = [...serialEntries];
+        if (startRowIndex + rows.length > currentEntries.length) {
+            const needed = startRowIndex + rows.length - currentEntries.length;
+            for(let k=0; k<needed; k++) currentEntries.push({ serial: '', voltage: '', resistance: '', capacity: '' });
+            setFormData(prev => ({...prev, quantity: currentEntries.length}));
+        }
+
+        const startColIdx = GRID_COLUMNS.indexOf(startColKey);
+        
+        rows.forEach((line, i) => {
+            const rowIndex = startRowIndex + i;
+            const cells = line.split('\t'); // Tab delimited for Excel/Sheets
+            
+            cells.forEach((cellValue, j) => {
+                const colIdx = startColIdx + j;
+                if (colIdx < GRID_COLUMNS.length) {
+                    const colKey = GRID_COLUMNS[colIdx];
+                    if (currentEntries[rowIndex]) {
+                        currentEntries[rowIndex] = {
+                            ...currentEntries[rowIndex],
+                            [colKey]: cellValue.trim()
+                        };
+                    }
+                }
+            });
+        });
+
+        setSerialEntries(currentEntries);
+  };
+
+  const handleEntryChange = (index: number, field: keyof SerialGridRow, value: string) => {
+      const newEntries = [...serialEntries];
+      newEntries[index] = { ...newEntries[index], [field]: value };
+      setSerialEntries(newEntries);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const serials = serialsText.split('\n').filter(s => s.trim() !== '');
+    const goodId = editingGood ? editingGood.id : `rec-${Date.now()}`;
+    const isCell = isTrackedCategory(formData.category);
+    
+    // Only capture serials if category is Cell
+    const validSerials = isCell 
+        ? serialEntries.map(e => e.serial).filter(s => s.trim() !== '') 
+        : [];
+    
+    // Prepare Received Good
+    const newGood: ReceivedGood = { 
+        ...formData, 
+        id: goodId, 
+        timestamp: editingGood ? editingGood.timestamp : Date.now(), 
+        serials: validSerials 
+    };
+
+    // Prepare Test Results (Only for Cells)
+    const newTestResults: TestResult[] = [];
+    if (isCell) {
+        serialEntries.forEach(entry => {
+            if (!entry.serial) return;
+            
+            // Check if there is any test data to save
+            if (entry.voltage || entry.resistance || entry.capacity) {
+                newTestResults.push({
+                    id: `test-${goodId}-${entry.serial}-${Date.now()}`,
+                    receivedGoodId: goodId,
+                    serialNumber: entry.serial,
+                    category: 'Cell',
+                    voltage: entry.voltage ? parseFloat(entry.voltage) : undefined,
+                    resistance: entry.resistance ? parseFloat(entry.resistance) : undefined,
+                    capacity: entry.capacity ? parseFloat(entry.capacity) : undefined,
+                    timestamp: Date.now(),
+                    testedBy: currentUser?.username || 'System'
+                });
+            }
+        });
+    }
 
     if (editingGood) {
-      const updatedGood: ReceivedGood = {
-        ...editingGood,
-        ...formData,
-        serials,
-      };
-      setReceivedGoods(prev => prev.map(g => g.id === editingGood.id ? updatedGood : g));
-      addLogEntry('Updated Raw Material', `Updated '${updatedGood.name}' (Qty: ${updatedGood.quantity}, Status: ${statusInfo[updatedGood.status].text}).`);
+        setReceivedGoods(prev => prev.map(g => g.id === editingGood.id ? newGood : g));
+        
+        // --- MASTER DATA INTEGRITY CHECK ---
+        // If name changed, prompt to update linked Recipes
+        if (editingGood.name !== newGood.name && recipes && setRecipes) {
+             const affectedRecipes = recipes.filter(r => 
+                 r.components.some(c => c.masterItemName === editingGood.name)
+             );
+
+             if (affectedRecipes.length > 0) {
+                 const confirmUpdate = window.confirm(
+                     `You renamed '${editingGood.name}' to '${newGood.name}'.\n\n` +
+                     `This item is used in ${affectedRecipes.length} Product SKUs (e.g. ${affectedRecipes[0].name}).\n` +
+                     `Do you want to update these SKUs to use the new name automatically?`
+                 );
+
+                 if (confirmUpdate) {
+                     setRecipes(prevRecipes => prevRecipes.map(r => ({
+                         ...r,
+                         components: r.components.map(c => 
+                             c.masterItemName === editingGood.name 
+                                 ? { ...c, masterItemName: newGood.name }
+                                 : c
+                         )
+                     })));
+                     addLogEntry('Master Data Update', `Auto-updated ${affectedRecipes.length} recipes due to item rename: ${editingGood.name} -> ${newGood.name}`);
+                 }
+             }
+        }
+        // -----------------------------------
+
+        // Update Test Results: Remove old results for this batch and add new ones (Full Sync)
+        setTestResults(prev => {
+            const otherResults = prev.filter(r => r.receivedGoodId !== goodId);
+            return [...otherResults, ...newTestResults];
+        });
+        
+        addLogEntry('Updated Raw Material', `Updated ${newGood.name}`);
     } else {
-      const newGood: ReceivedGood = {
-        ...formData,
-        id: `rec-${Date.now()}`,
-        timestamp: Date.now(),
-        serials,
-      };
-      setReceivedGoods(prev => [newGood, ...prev]);
-      addLogEntry('Added Raw Material', `Added ${newGood.quantity} units of '${newGood.name}'.`);
+        setReceivedGoods(prev => [newGood, ...prev]);
+        setTestResults(prev => [...prev, ...newTestResults]);
+        addLogEntry('Added Raw Material', `Registered ${newGood.quantity} of ${newGood.name}`);
     }
-    
     setIsModalOpen(false);
-    setEditingGood(null);
   };
 
-  const handleGenerateSerials = (e: React.FormEvent) => {
-    e.preventDefault();
-    const serials = [];
-    const endNumber = startNumber + totalCount - 1;
-    const paddingLength = String(endNumber).length;
-
-    for (let i = 0; i < totalCount; i++) {
-      const currentNumber = startNumber + i;
-      const paddedNumber = String(currentNumber).padStart(paddingLength, '0');
-      serials.push(`${prefix}-${paddedNumber}`);
-    }
-    setGeneratedSerials(serials.join('\n'));
-  };
-
-  const handleCopyToClipboard = () => {
-    if (generatedSerials) {
-      navigator.clipboard.writeText(generatedSerials);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    }
-  };
-  
-  const mapStatusStringToEnum = (statusStr: string): ReceivedGoodStatus => {
-    const normalized = statusStr.trim().toLowerCase();
-    switch (normalized) {
-        case 'not damaged':
-            return ReceivedGoodStatus.ND;
-        case 'partially received':
-            return ReceivedGoodStatus.PR;
-        case 'damaged':
-            return ReceivedGoodStatus.D;
-        case 'other':
-            return ReceivedGoodStatus.Other;
-        default:
-            return ReceivedGoodStatus.Other;
-    }
-  };
-
-  const parseAndImportCsv = (csvText: string) => {
-    const lines = csvText.trim().split('\n');
-    if (lines.length < 2) {
-        alert('CSV file is empty or has no data rows.');
-        return;
-    }
-
-    const header = lines[0].split(',').map(h => h.trim());
-    const expectedHeader = ['Item Name', 'Make & Model', 'Supplier Company', 'Tax Invoice Number', 'Quantity', 'Received As'];
-    
-    // Naive header check.
-    if (header.length !== expectedHeader.length || !header.every((h, i) => h.toLowerCase() === expectedHeader[i].toLowerCase())) {
-        alert(`Invalid CSV header. Expected: ${expectedHeader.join(', ')}`);
-        return;
-    }
-
-    const newGoods: ReceivedGood[] = [];
-    const errors: string[] = [];
-
-    lines.slice(1).forEach((line, index) => {
-        if (!line.trim()) return; 
-
-        const values = line.split(',');
-        if (values.length !== expectedHeader.length) {
-            errors.push(`Row ${index + 2}: Incorrect number of columns. Expected ${expectedHeader.length}, found ${values.length}.`);
-            return;
-        }
-
-        const [name, makeModel, supplier, invoiceNumber, quantityStr, statusStr] = values.map(v => v.trim());
-
-        const quantity = parseInt(quantityStr, 10);
-        if (isNaN(quantity) || quantity < 0) {
-            errors.push(`Row ${index + 2}: Invalid quantity "${quantityStr}". Must be a non-negative number.`);
-            return;
-        }
-
-        const newGood: ReceivedGood = {
-            id: `rec-${Date.now()}-${index}`,
-            timestamp: Date.now(),
-            name,
-            makeModel,
-            supplier,
-            invoiceNumber,
-            quantity,
-            status: mapStatusStringToEnum(statusStr),
-            damagedCount: 0,
-            serials: [],
-        };
-        newGoods.push(newGood);
-    });
-
-    if (errors.length > 0) {
-        alert(`Errors found in CSV:\n${errors.join('\n')}`);
-    }
-
-    if (newGoods.length > 0) {
-        setReceivedGoods(prev => [...newGoods, ...prev]);
-        addLogEntry('Imported Raw Materials', `Imported ${newGoods.length} items via CSV.`);
-        alert(`${newGoods.length} items imported successfully.`);
-    } else if (errors.length === 0) {
-        alert('No new items to import from the CSV file.');
-    }
-  };
-
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-          const text = event.target?.result;
-          if (typeof text === 'string') {
-              parseAndImportCsv(text);
+  const handleDelete = () => {
+      if (editingGood) {
+          if (confirm(`Delete ${editingGood.name}?`)) {
+              setReceivedGoods(prev => prev.filter(g => g.id !== editingGood.id));
+              // Optionally delete test results too
+              setTestResults(prev => prev.filter(r => r.receivedGoodId !== editingGood.id));
+              addLogEntry('Deleted Raw Material', `Deleted ${editingGood.name}`);
+              setIsModalOpen(false);
           }
-      };
-      reader.onerror = () => {
-        alert('Error reading file.');
       }
-      reader.readAsText(file);
-      e.target.value = ''; 
   };
-  
-  const filteredGoods = receivedGoods.filter(good => 
-    good.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Raw Materials</h1>
-        <div className="flex items-center space-x-2">
-            <button
-              onClick={handleImportClick}
-              className="flex items-center bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-green-700 transition-colors"
-            >
-              <ImportIcon />
-              <span className="ml-2">Import CSV</span>
-            </button>
-            <button
-              onClick={handleOpenAddModal}
-              className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon />
-              <span className="ml-2">Add New Entry</span>
-            </button>
+    <div className="max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+        <div>
+            <h1 className="text-3xl font-black text-[#0D0D0D] tracking-tight">Inventory Stock</h1>
+            <p className="text-sm text-[#404040] mt-1 font-medium">Manage raw materials and tracked components.</p>
         </div>
-        <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            accept=".csv, text/csv"
-        />
+        <div className="flex items-center space-x-3">
+            <button onClick={handleCreateNew} className="flex items-center bg-[#8EBF45] text-[#0D0D0D] px-6 py-2.5 rounded-xl shadow-lg hover:bg-[#658C3E] hover:text-white transition-all transform active:scale-95 font-bold uppercase tracking-widest text-xs">
+              <PlusIcon /> <span className="ml-2">Register Item</span>
+            </button>
+            <button onClick={() => fileInputRef.current?.click()} className="flex items-center bg-white border-2 border-[#A8BF75] text-[#658C3E] px-4 py-2 rounded-xl hover:bg-[#A8BF75]/10 transition-colors text-xs font-bold uppercase tracking-widest">
+                <ImportIcon className="mr-2" size={14} /> Import
+            </button>
+            <input type="file" ref={fileInputRef} className="hidden" accept=".csv" />
+        </div>
       </div>
 
-      <div className="mb-6 relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
-          </svg>
+      <div className="mb-4 relative group">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#8EBF45] transition-colors">
+            <SearchIcon className="h-5 w-5" />
         </div>
         <input 
           type="text" 
-          placeholder="Search by item name..." 
-          className="block w-full p-3 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+          placeholder="Filter by name, make, supplier or invoice..." 
+          className="block w-full p-4 pl-12 border-2 border-slate-200 rounded-2xl shadow-sm focus:outline-none focus:border-[#8EBF45] focus:ring-4 focus:ring-[#8EBF45]/10 transition-all text-[#404040]"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
         />
       </div>
 
-      {/* Serial Number Generator */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Serial Number Generator</h2>
-        <form onSubmit={handleGenerateSerials} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-            <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Alphanumeric Text</label>
-                <input type="text" value={prefix} onChange={e => setPrefix(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700">Numeric Start From</label>
-                <input type="number" value={startNumber} onChange={e => setStartNumber(Number(e.target.value))} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" min="0" required />
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-gray-700">Total Serial Numbers</label>
-                <input type="number" value={totalCount} onChange={e => setTotalCount(Number(e.target.value))} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" min="1" required />
-            </div>
-            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 h-10">Generate</button>
-        </form>
-        {generatedSerials && (
-            <div className="mt-4">
-                 <label className="block text-sm font-medium text-gray-700">Generated Serials</label>
-                 <textarea value={generatedSerials} readOnly rows={8} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-50 font-mono"></textarea>
-                 <button onClick={handleCopyToClipboard} className="mt-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 text-sm w-full md:w-auto">
-                    {isCopied ? 'Copied!' : 'Copy to Clipboard'}
-                 </button>
-            </div>
-        )}
+      {/* Category Filters */}
+      <div className="mb-8 flex flex-wrap gap-2">
+          <button 
+              onClick={() => setSelectedCategory('All')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${selectedCategory === 'All' ? 'bg-[#0D0D0D] text-white border-[#0D0D0D]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+          >
+              All
+          </button>
+          {CATEGORIES.map(cat => (
+              <button 
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${selectedCategory === cat ? 'bg-[#8EBF45] text-[#0D0D0D] border-[#8EBF45] shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+              >
+                  {cat}
+              </button>
+          ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredGoods.map(good => (
-          <div key={good.id} className="bg-white rounded-lg shadow-md p-5 flex flex-col justify-between hover:shadow-lg transition-shadow">
-            <div>
-              <div className="flex justify-between items-start">
-                  <h3 className="font-bold text-lg text-gray-900">{good.name}</h3>
-                  <div className={`px-2 py-1 text-xs font-semibold rounded-full ${statusInfo[good.status].color}`}>
-                    {statusInfo[good.status].text}
-                  </div>
-              </div>
-              <p className="text-sm text-gray-600">{good.makeModel}</p>
-              <p className="text-sm text-gray-500 mt-2">Supplier: {good.supplier}</p>
-              <p className="text-sm text-gray-500">Invoice: {good.invoiceNumber}</p>
-              <p className="text-xs text-gray-400 mt-1">Received: {new Date(good.timestamp).toLocaleString()}</p>
-              
-              <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-                <div className="text-center">
-                    <p className="text-xs text-gray-500">Quantity</p>
-                    <p className="font-bold text-xl text-blue-600">{good.quantity}</p>
-                </div>
-                {good.status === ReceivedGoodStatus.D && (
-                    <div className="text-center">
-                        <p className="text-xs text-gray-500">Damaged</p>
-                        <p className="font-bold text-xl text-red-600">{good.damagedCount}</p>
+        {filteredGoods.map(good => {
+            const isTracked = isTrackedCategory(good.category);
+            const progress = isTracked && good.serials.length > 0 ? Math.min(100, Math.round((good.serials.length / good.quantity) * 100)) : 0;
+            
+            return (
+              <div key={good.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl p-6 flex flex-col border border-slate-200 transition-all duration-300">
+                <div className="flex justify-between items-start mb-4">
+                    <div className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md ${statusInfo[good.status].color}`}>
+                        {statusInfo[good.status].text}
                     </div>
-                )}
-                <div className="text-center">
-                    <p className="text-xs text-gray-500">Serials</p>
-                    <p className="font-bold text-xl">{good.serials.length}</p>
+                    <span className="text-[10px] font-bold text-slate-300">{new Date(good.timestamp).toLocaleDateString()}</span>
+                </div>
+
+                <div className="flex-1">
+                  <h3 className="font-bold text-xl text-[#0D0D0D] leading-tight mb-1">{good.name}</h3>
+                  <p className="text-xs text-[#658C3E] font-black uppercase tracking-widest">{good.makeModel}</p>
+                  <div className="mt-4 flex justify-between items-end border-t border-slate-50 pt-4">
+                      <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Supplier</p>
+                          <p className="text-sm font-bold text-[#404040] truncate max-w-[120px]">{good.supplier}</p>
+                      </div>
+                      <div className="text-right">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Available</p>
+                          <p className={`text-2xl font-black ${good.quantity === 0 ? 'text-red-500' : 'text-[#8EBF45]'}`}>{good.quantity}</p>
+                      </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-4">
+                    <div>
+                        <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                            <span>{isTracked ? 'Tracked Serials' : 'Stock Level'}</span>
+                            <span className="text-[#658C3E]">{isTracked ? `${good.serials.length} / ${good.quantity}` : `${good.quantity} units`}</span>
+                        </div>
+                        {isTracked && (
+                            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
+                                <div className={`h-full transition-all duration-500 rounded-full ${progress === 100 ? 'bg-[#8EBF45]' : 'bg-[#658C3E]'}`} style={{ width: `${progress}%` }}></div>
+                            </div>
+                        )}
+                        {!isTracked && (
+                            <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
+                                <div className="h-full bg-slate-300 w-full rounded-full"></div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                        <button onClick={() => handleEditClick(good)} className="p-2.5 text-slate-400 hover:text-[#8EBF45] hover:bg-[#8EBF45]/5 rounded-xl transition-all"><PencilIcon /></button>
+                    </div>
                 </div>
               </div>
-            </div>
-            <div className="mt-4 flex items-center justify-end space-x-2">
-                <button onClick={() => handleEdit(good)} className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-100 rounded-full transition-colors" title="Edit Item"><PencilIcon /></button>
-            </div>
-          </div>
-        ))}
+            );
+        })}
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingGood ? "Edit Raw Material" : "Add New Raw Material"}>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div><label className="block text-sm font-medium text-gray-700">Item Name</label><input type="text" name="name" value={formData.name} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required /></div>
-          <div><label className="block text-sm font-medium text-gray-700">Make & Model</label><input type="text" name="makeModel" value={formData.makeModel} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required /></div>
-          <div><label className="block text-sm font-medium text-gray-700">Supplier Company</label><input type="text" name="supplier" value={formData.supplier} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required /></div>
-          <div><label className="block text-sm font-medium text-gray-700">Tax Invoice Number</label><input type="text" name="invoiceNumber" value={formData.invoiceNumber} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required /></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div><label className="block text-sm font-medium text-gray-700">Quantity</label><input type="number" name="quantity" value={formData.quantity} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" min="0" required /></div>
-            <div><label className="block text-sm font-medium text-gray-700">Received As</label>
-              <select name="status" value={formData.status} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
-                {Object.values(ReceivedGoodStatus).map(s => <option key={s} value={s}>{statusInfo[s].text}</option>)}
-              </select>
-            </div>
-          </div>
-          {formData.status === ReceivedGoodStatus.D && (
-            <div><label className="block text-sm font-medium text-gray-700">Damaged Count</label><input type="number" name="damagedCount" value={formData.damagedCount} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" min="0" /></div>
-          )}
-          <div><label className="block text-sm font-medium text-gray-700">Serial Numbers (one per line)</label><textarea name="serials" value={serialsText} onChange={handleSerialsChange} rows={4} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea></div>
-          <div className="flex justify-end pt-4"><button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Save Entry</button></div>
-        </form>
-      </Modal>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingGood ? "Edit Record" : "Register Stock"} size="xl">
+         <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                    <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Item Name</label>
+                    <input type="text" list="item-names" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none font-semibold text-sm" required placeholder="e.g. 32700 6000mAh Cell" />
+                    <datalist id="item-names">
+                        {Array.from(new Set(receivedGoods.map(g => g.name))).map(n => <option key={n} value={n} />)}
+                    </datalist>
+                </div>
+                
+                <div>
+                    <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Category</label>
+                    <input type="text" list="categories" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm" required />
+                    <datalist id="categories">
+                        {CATEGORIES.map(c => <option key={c} value={c} />)}
+                    </datalist>
+                </div>
 
+                <div>
+                    <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Make / Model</label>
+                    <input type="text" value={formData.makeModel} onChange={e => setFormData({...formData, makeModel: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm" placeholder="e.g. EVE" />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Supplier</label>
+                    <input type="text" value={formData.supplier} onChange={e => setFormData({...formData, supplier: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm" />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Invoice Number</label>
+                    <input type="text" value={formData.invoiceNumber} onChange={e => setFormData({...formData, invoiceNumber: e.target.value})} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm" />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Quantity</label>
+                    <input type="number" min="0" value={formData.quantity} onChange={e => setFormData({...formData, quantity: parseInt(e.target.value)})} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm font-bold" required />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Status</label>
+                    <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm bg-white">
+                        {Object.entries(statusInfo).map(([key, info]) => (
+                            <option key={key} value={key}>{info.text}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Serial Number & Test Data Management - ONLY FOR CELLS */}
+            {isTrackedCategory(formData.category) && (
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div className="flex justify-between items-center mb-3">
+                        <h3 className="text-sm font-bold text-slate-700 uppercase">Serials & Test Data</h3>
+                        <div className="text-right">
+                            <span className="text-xs text-slate-500 block">{serialEntries.filter(s => s.serial).length} / {formData.quantity} Assigned</span>
+                            <span className="text-[9px] text-[#658C3E]">Paste into any cell. Grid auto-expands.</span>
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-2 mb-3 items-end">
+                        <div className="flex-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase">Prefix</label>
+                            <input type="text" placeholder="e.g. SN-" className="w-full p-2 border rounded text-xs" value={prefix} onChange={e => setPrefix(e.target.value)} />
+                        </div>
+                        <div className="w-20">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase">Start #</label>
+                            <input type="number" className="w-full p-2 border rounded text-xs" value={startNumber} onChange={e => setStartNumber(parseInt(e.target.value))} />
+                        </div>
+                        <button type="button" onClick={handleAutoGenerate} className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded text-xs font-bold transition-colors">
+                            Auto-Generate
+                        </button>
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-lg bg-white">
+                        <table className="w-full text-xs text-left">
+                            <thead className="bg-slate-100 text-slate-500 font-bold sticky top-0 z-10">
+                                <tr>
+                                    <th className="p-2 border-b w-8">#</th>
+                                    <th className="p-2 border-b">Serial Number</th>
+                                    <th className="p-2 border-b w-24">Voltage (V)</th>
+                                    <th className="p-2 border-b w-24">Res (mΩ)</th>
+                                    <th className="p-2 border-b w-24">Cap (Ah)</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {serialEntries.map((entry, idx) => (
+                                    <tr key={idx} className="hover:bg-blue-50">
+                                        <td className="p-2 text-slate-400 text-center">{idx + 1}</td>
+                                        <td className="p-1">
+                                            <input 
+                                                type="text" 
+                                                className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-[#8EBF45] focus:bg-white rounded outline-none bg-transparent font-mono"
+                                                value={entry.serial}
+                                                onChange={(e) => handleEntryChange(idx, 'serial', e.target.value)}
+                                                onPaste={(e) => handleGridPaste(e, idx, 'serial')}
+                                                placeholder={`Serial ${idx + 1}`}
+                                            />
+                                        </td>
+                                        <td className="p-1">
+                                            <input 
+                                                type="text" 
+                                                className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-[#8EBF45] focus:bg-white rounded outline-none bg-transparent"
+                                                value={entry.voltage}
+                                                onChange={(e) => handleEntryChange(idx, 'voltage', e.target.value)}
+                                                onPaste={(e) => handleGridPaste(e, idx, 'voltage')}
+                                            />
+                                        </td>
+                                        <td className="p-1">
+                                            <input 
+                                                type="text" 
+                                                className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-[#8EBF45] focus:bg-white rounded outline-none bg-transparent"
+                                                value={entry.resistance}
+                                                onChange={(e) => handleEntryChange(idx, 'resistance', e.target.value)}
+                                                onPaste={(e) => handleGridPaste(e, idx, 'resistance')}
+                                            />
+                                        </td>
+                                        <td className="p-1">
+                                            <input 
+                                                type="text" 
+                                                className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-[#8EBF45] focus:bg-white rounded outline-none bg-transparent"
+                                                value={entry.capacity}
+                                                onChange={(e) => handleEntryChange(idx, 'capacity', e.target.value)}
+                                                onPaste={(e) => handleGridPaste(e, idx, 'capacity')}
+                                            />
+                                        </td>
+                                    </tr>
+                                ))}
+                                {serialEntries.length === 0 && (
+                                    <tr>
+                                        <td colSpan={5} className="p-4 text-center text-slate-400 italic">
+                                            Set quantity to initialize grid rows.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {!isTrackedCategory(formData.category) && formData.category && (
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl text-blue-800 text-sm">
+                    <strong>Bulk Item Tracking:</strong> Serial number tracking is disabled for '{formData.category}'. 
+                    Items will be tracked by quantity only.
+                </div>
+            )}
+
+            <div className="flex justify-between pt-4 border-t border-slate-100">
+                {editingGood ? (
+                    <button type="button" onClick={handleDelete} className="text-red-500 hover:text-red-700 text-xs font-bold flex items-center px-2">
+                        <Trash2 size={16} className="mr-1"/> Delete Record
+                    </button>
+                ) : <div></div>}
+                
+                <button type="submit" className="bg-[#8EBF45] text-[#0D0D0D] px-8 py-2.5 rounded-lg hover:bg-[#658C3E] hover:text-white transition-all font-black uppercase tracking-widest text-xs shadow-lg active:scale-95">
+                    {editingGood ? 'Update Record' : 'Save Record'}
+                </button>
+            </div>
+         </form>
+      </Modal>
     </div>
   );
 };

@@ -1,25 +1,82 @@
+
+export type View =
+  | 'received'
+  | 'testing'
+  | 'wip'
+  | 'finished'
+  | 'storage'
+  | 'reports'
+  | 'master'
+  | 'log'
+  | 'companies'
+  | 'users'
+  | 'ai_assistant'
+  | 'finance_dashboard'
+  | 'finance_upload'
+  | 'finance_gst'
+  | 'finance_expenses'
+  | 'finance_maker';
+
+export interface User {
+  username: string;
+  password?: string;
+  role: 'admin' | 'user';
+}
+
+export interface LogEntry {
+  id: string;
+  timestamp: number;
+  username: string;
+  action: string;
+  details: string;
+}
+
 export enum ReceivedGoodStatus {
-  ND = 'ND', // Not Damaged
-  PR = 'PR', // Partially Received
-  D = 'D',   // Damaged
-  Other = 'Other'
+  ND = 'ND',
+  PR = 'PR',
+  D = 'D',
+  Other = 'Other',
 }
 
 export interface ReceivedGood {
   id: string;
   name: string;
+  category: string;
   makeModel: string;
   supplier: string;
   quantity: number;
-  status: ReceivedGoodStatus;
+  status: ReceivedGoodStatus | string;
   damagedCount: number;
   invoiceNumber: string;
   serials: string[];
   timestamp: number;
+  testReportLink?: string;
+  gradingConfig?: {
+      lowerLimit: number;
+      upperLimit: number;
+      numGrades: number;
+      mode: 'capacity' | 'resistance' | 'voltage';
+  };
+}
+
+export interface TestResult {
+  id: string;
+  receivedGoodId: string;
+  serialNumber: string;
+  category: 'Cell' | 'BMS';
+  voltage?: number;
+  resistance?: number;
+  capacity?: number;
+  passed?: boolean;
+  grade?: string;
+  location?: string;
+  timestamp: number;
+  testedBy: string;
 }
 
 export interface RecipeComponent {
-  receivedGoodId: string;
+  masterItemName?: string;
+  receivedGoodId?: string;
   quantityPerUnit: number;
 }
 
@@ -34,7 +91,33 @@ export interface WIPItem {
   recipeId: string;
   quantity: number;
   timestamp: number;
-  consumedSerials?: { [receivedGoodId: string]: string[] };
+  consumedSerials: { [receivedGoodId: string]: string[] };
+}
+
+export interface UnitMetadata {
+    chemistry?: 'LFP' | 'NMC';
+    balancing?: string;
+    voltage?: number;
+    capacity?: number;
+    resistance?: number;
+    weight?: number;
+}
+
+export interface FinishedGood {
+  id: string;
+  recipeId: string;
+  quantity: number;
+  timestamp: number;
+  consumedSerials: { [receivedGoodId: string]: string[] };
+  qualityRemarks: string;
+  deliveredTo?: string;
+  unitDeliveries?: { [unitId: string]: string };
+  inRepairUnitIds?: string[];
+  repairedUnitIds?: string[];
+  dismantledUnitIds?: string[];
+  unitMetadata?: { [unitId: string]: UnitMetadata };
+  // Map of Unit ID -> { ReceivedGood ID -> [Serials Used] }
+  unitComponentMap?: { [unitId: string]: { [receivedGoodId: string]: string[] } };
 }
 
 export interface RepairItem {
@@ -45,28 +128,157 @@ export interface RepairItem {
   timestamp: number;
 }
 
-export interface FinishedGood {
+export interface CompanyProfile {
   id: string;
-  recipeId: string;
-  quantity: number;
-  qualityRemarks: string;
-  deliveredTo: string;
-  timestamp: number;
-  consumedSerials?: { [receivedGoodId: string]: string[] };
-  inRepairUnitIds?: string[];
-  repairedUnitIds?: string[];
+  name: string;
+  gstNumber: string;
+  shippingAddress: string;
+  email: string;
+  contactPerson: string;
+  phoneNumber: string;
 }
 
-export interface User {
-  username: string;
-  password: string; // In a real app, this would be a hash
-  role: 'admin' | 'user';
+// --- Storage Management Types ---
+
+export interface StorageRoom {
+    id: string;
+    name: string;
 }
 
-export interface LogEntry {
-  id: string;
-  timestamp: number;
-  username: string;
-  action: string;
-  details: string;
+export interface StorageUnit {
+    id: string;
+    roomId: string;
+    name: string;
+    type: 'rack' | 'cupboard' | 'drawer';
+    sectionCount: number;
 }
+
+export interface StorageItem {
+    id: string;
+    unitId: string;
+    sectionIndex: number;
+    name: string;
+    description?: string;
+    quantity: number;
+    linkedInventoryId?: string;
+    timestamp: number;
+}
+
+// --- Finance & Invoice Types ---
+
+export interface BankDetails {
+    account_name?: string;
+    account_number?: string;
+    bank_name?: string;
+    branch?: string;
+    ifsc?: string;
+}
+
+export interface InvoiceParty {
+    name?: string;
+    gstin?: string;
+    address?: string;
+    state?: string;
+    state_code?: string;
+    email?: string;
+    phone?: string;
+    contact_person?: string;
+    pan?: string;
+    bank_details?: BankDetails;
+}
+
+export interface InvoiceItem {
+    description: string;
+    item_type?: string;
+    make_model?: string;
+    status?: string;
+    hsn_sac?: string;
+    quantity: number;
+    unit_price: number;
+    taxable_value: number;
+    cgst_rate?: number;
+    cgst_amount?: number;
+    sgst_rate?: number;
+    sgst_amount?: number;
+    igst_rate?: number;
+    igst_amount?: number;
+    total_value: number;
+}
+
+export interface ExtractedInvoice {
+    id?: string;
+    created_at?: string;
+    timestamp?: string;
+    filename: string;
+    document_type: 'invoice' | 'receipt' | 'credit_note' | 'debit_note' | 'generated_invoice' | 'generated_po' | 'other';
+    source_type: 'sales' | 'purchase';
+    issuer_details: InvoiceParty;
+    receiver_details: InvoiceParty;
+    invoice_metadata: {
+        invoice_number: string;
+        invoice_date: string;
+        due_date?: string;
+        purchase_order_number?: string;
+        ewaybill_number?: string;
+        input_tax_credit?: 'set_off' | 'non_set_off' | 'not_applicable';
+        related_invoice_number?: string;
+        note_reason?: string;
+        employee_name?: string;
+        expense_category?: string;
+    };
+    items: InvoiceItem[];
+    totals: {
+        subtotal_taxable: number;
+        cgst_total: number;
+        sgst_total: number;
+        igst_total: number;
+        round_off?: number;
+        grand_total: number;
+        currency?: string;
+    };
+    ocr_confidence_score?: number;
+    raw_text?: string;
+    requires_review: boolean;
+    uploaded_by?: string;
+}
+
+export interface InvoiceTemplate {
+    id?: string;
+    name: string;
+    type: 'invoice' | 'po';
+    config: {
+        font: 'font-sans' | 'font-serif' | 'font-mono';
+        color: string;
+        headerText: string;
+        footerText: string;
+        terms: string;
+        logoUrl?: string;
+        stampUrl?: string;
+        logoSize?: number;
+        signatureUrl?: string;
+        issuer_details?: InvoiceParty;
+    }
+}
+
+export interface GST3BSummary {
+    outward_taxable: number;
+    outward_igst: number;
+    outward_cgst: number;
+    outward_sgst: number;
+    itc_igst: number;
+    itc_cgst: number;
+    itc_sgst: number;
+    itc_ineligible: number;
+}
+
+export const EMPTY_INVOICE: ExtractedInvoice = {
+    filename: '',
+    document_type: 'invoice',
+    source_type: 'purchase',
+    issuer_details: {},
+    receiver_details: {},
+    invoice_metadata: { invoice_number: '', invoice_date: '' },
+    items: [],
+    totals: { subtotal_taxable: 0, cgst_total: 0, sgst_total: 0, igst_total: 0, grand_total: 0 },
+    requires_review: true
+};

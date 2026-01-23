@@ -1,10 +1,79 @@
-import React, { useState, useMemo } from 'react';
-import type { WIPItem, Recipe, ReceivedGood, FinishedGood, RepairItem } from '../types';
+
+import React, { useState, useMemo, useEffect } from 'react';
+import type { WIPItem, ReceivedGood, Recipe, FinishedGood, RepairItem, TestResult, CompanyProfile, UnitMetadata } from '../types';
 import Modal from './Modal';
 import { PlusIcon } from './icons/PlusIcon';
 import { TrashIcon } from './icons/TrashIcon';
+import { RefreshCw, Printer, ChevronUp, ChevronDown } from './invoices/Icons'; 
+import { SearchIcon } from './icons/SearchIcon';
 import { ArrowRightIcon } from './icons/ArrowRightIcon';
-import { SpannerIcon } from './icons/SpannerIcon';
+import { generateUnitIds } from '../utils';
+
+// SearchableSelect Component
+interface SearchableSelectProps {
+  options: { id: string; label: string; subLabel?: string }[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
+const SearchableSelect: React.FC<SearchableSelectProps> = ({ options, value, onChange, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  
+  const filteredOptions = options.filter(opt => 
+    opt.label.toLowerCase().includes(search.toLowerCase()) || 
+    (opt.subLabel && opt.subLabel.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const selectedOption = options.find(o => o.id === value);
+
+  return (
+    <div className="relative">
+      <div 
+        className="w-full p-2.5 border rounded-md shadow-sm bg-white cursor-pointer flex justify-between items-center text-sm border-slate-300"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className={selectedOption ? 'text-slate-800 font-medium' : 'text-slate-400'}>
+          {selectedOption ? selectedOption.label : placeholder || 'Select...'}
+        </span>
+        <span className="text-slate-400 text-xs">▼</span>
+      </div>
+      
+      {isOpen && (
+        <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+          <input 
+            type="text" 
+            className="w-full p-2 border-b border-slate-100 outline-none text-sm sticky top-0 bg-white" 
+            placeholder="Search..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)} 
+            autoFocus
+          />
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map(opt => (
+              <div 
+                key={opt.id} 
+                className="p-2 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0"
+                onClick={() => {
+                  onChange(opt.id);
+                  setIsOpen(false);
+                  setSearch('');
+                }}
+              >
+                <div className="text-sm font-medium text-slate-800">{opt.label}</div>
+                {opt.subLabel && <div className="text-xs text-slate-500">{opt.subLabel}</div>}
+              </div>
+            ))
+          ) : (
+            <div className="p-2 text-xs text-slate-400 italic text-center">No options found</div>
+          )}
+        </div>
+      )}
+      {isOpen && <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />}
+    </div>
+  );
+};
 
 interface WorkInProgressProps {
   wipItems: WIPItem[];
@@ -18,109 +87,278 @@ interface WorkInProgressProps {
   setRepairItems: React.Dispatch<React.SetStateAction<RepairItem[]>>;
   finishedGoods: FinishedGood[];
   addLogEntry: (action: string, details: string) => void;
+  testResults: TestResult[];
+  companyProfiles: CompanyProfile[];
+  productionDraft: { receivedGoodId: string; serials: string[] } | null;
+  setProductionDraft: React.Dispatch<React.SetStateAction<{ receivedGoodId: string; serials: string[] } | null>>;
 }
 
-const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, receivedGoods, setReceivedGoods, recipes, setRecipes, setFinishedGoods, repairItems, setRepairItems, finishedGoods, addLogEntry }) => {
+const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, receivedGoods, setReceivedGoods, recipes, setRecipes, setFinishedGoods, repairItems, setRepairItems, finishedGoods, addLogEntry, testResults, companyProfiles, productionDraft, setProductionDraft }) => {
+  // State
   const [isWipModalOpen, setWipModalOpen] = useState(false);
-  const [isRecipeModalOpen, setRecipeModalOpen] = useState(false);
-  const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
-  
-  const [selectedRecipe, setSelectedRecipe] = useState<string>(recipes[0]?.id || '');
+  const [selectedRecipe, setSelectedRecipe] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [consumedSerials, setConsumedSerials] = useState<{ [receivedGoodId: string]: string[] }>({});
+  const [consumedSerials, setConsumedSerials] = useState<{ [goodId: string]: string[] }>({});
   const [error, setError] = useState('');
+  
+  const [expandedWipId, setExpandedWipId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [newRecipeName, setNewRecipeName] = useState('');
-  const [newRecipeComponents, setNewRecipeComponents] = useState<{ receivedGoodId: string; quantityPerUnit: number }[]>([{ receivedGoodId: '', quantityPerUnit: 1 }]);
+  // Replacement State
+  const [isReplacementModalOpen, setIsReplacementModalOpen] = useState(false);
+  const [replacementTarget, setReplacementTarget] = useState<{ wipItemId: string; goodId: string; damagedSerial: string } | null>(null);
+  const [replacementSearchTerm, setReplacementSearchTerm] = useState('');
 
+  // Manage Serials State
+  const [isManageSerialsModalOpen, setIsManageSerialsModalOpen] = useState(false);
+  const [activeWipItem, setActiveWipItem] = useState<WIPItem | null>(null);
+
+  // Recipe Management
+  const [isRecipeModalOpen, setRecipeModalOpen] = useState(false);
+  const [newRecipeName, setNewRecipeName] = useState('');
+  const [newRecipeComponents, setNewRecipeComponents] = useState<{ masterItemName?: string; receivedGoodId?: string; quantityPerUnit: number }[]>([{ masterItemName: '', quantityPerUnit: 1 }]);
+
+  // Finish Production State
+  const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
   const [itemToFinish, setItemToFinish] = useState<WIPItem | null>(null);
-  const [finishFormData, setFinishFormData] = useState({ qualityRemarks: '', deliveredTo: '' });
+  const [finishFormData, setFinishFormData] = useState({ qualityRemarks: '' });
+
+  // Effects
+  useEffect(() => {
+      if (productionDraft) {
+          // If coming from testing, we might want to prompt to create a recipe if none matches, or start production
+          // For simplicity, let's open the WIP modal and try to find a recipe using this item
+          setWipModalOpen(true);
+          // Try to find a recipe that uses this item
+          const good = receivedGoods.find(g => g.id === productionDraft.receivedGoodId);
+          if (good) {
+              const matchingRecipe = recipes.find(r => r.components.some(c => c.masterItemName === good.name || c.receivedGoodId === good.id));
+              if (matchingRecipe) {
+                  setSelectedRecipe(matchingRecipe.id);
+                  // Pre-select serials
+                  setConsumedSerials(prev => ({
+                      ...prev,
+                      [productionDraft.receivedGoodId]: productionDraft.serials
+                  }));
+                  setQuantity(Math.floor(productionDraft.serials.length / (matchingRecipe.components.find(c => c.masterItemName === good.name || c.receivedGoodId === good.id)?.quantityPerUnit || 1)) || 1);
+              }
+          }
+          // Clear draft after using it (or ignoring it)
+          setProductionDraft(null);
+      }
+  }, [productionDraft, recipes, receivedGoods, setProductionDraft]);
+
+  // Helpers
+  const getRecipeName = (id: string) => recipes.find(r => r.id === id)?.name || 'Unknown SKU';
+  const getGoodName = (id: string) => receivedGoods.find(g => g.id === id)?.name || 'Unknown Item';
+
+  const getAvailableSerialsForBatch = (good: ReceivedGood) => {
+      const category = (good.category || '').trim().toLowerCase();
+      const name = (good.name || '').trim().toLowerCase();
+      
+      // Explicitly identify Bulk types based on common naming conventions
+      const isBms = category.includes('bms') || name.includes('bms') || name.includes('pcm') || name.includes('pcb');
+      
+      const isAccessory = 
+          name.includes('holder') || name.includes('spacer') || name.includes('strip') || 
+          name.includes('tape') || name.includes('bracket') || name.includes('screw') || 
+          name.includes('wire') || name.includes('connector') || name.includes('cabinet') || 
+          name.includes('sleeve') || name.includes('epoxy') || name.includes('busbar');
+
+      // Strict Cell Definition: 
+      // 1. Must NOT be a BMS or Accessory
+      // 2. Must either be in 'cell' category OR have 'cell' in the name
+      // This prevents "BMS for LFP Cell" from being treated as a Cell.
+      const isCellName = name.includes('cell') || category.includes('cell');
+      const isTracked = isCellName && !isBms && !isAccessory;
+      
+      // Case 1: Tracked Items (Cells Only)
+      if (isTracked) {
+          if (!good.serials || good.serials.length === 0) return []; // Must have serials
+          
+          return good.serials.filter(serial => {
+              const result = testResults.find(tr => tr.receivedGoodId === good.id && tr.serialNumber === serial);
+              
+              if (isTracked) {
+                  // Cells MUST have test data for matching criteria (Voltage/IR/Cap)
+                  if (!result) return false; 
+                  
+                  const v = result.voltage;
+                  const r = result.resistance;
+                  
+                  // Basic logic: if tested, it's available. 
+                  if (v === undefined || r === undefined) return false;
+                  
+                  return true;
+              }
+              return true;
+          });
+      }
+
+      // Case 2: Bulk Items (BMS, Screws, Wires, Cell Holders, etc.)
+      // If real serials exist (manually added), use them.
+      if (good.serials && good.serials.length > 0) {
+          return good.serials;
+      }
+
+      // If no serials but quantity > 0, generate synthetic serials for tracking consumption
+      if (good.quantity > 0) {
+          return Array.from({ length: good.quantity }).map((_, i) => `BULK-${good.id.slice(-6)}-${i + 1}`);
+      }
+
+      return [];
+  };
 
   const handleOpenWipModal = () => {
-    setSelectedRecipe(recipes[0]?.id || '');
-    setQuantity(1);
-    setConsumedSerials({});
-    setError('');
-    setWipModalOpen(true);
-  };
-  
-  const handleConsumedSerialsChange = (goodId: string, serialsText: string) => {
-    const serials = serialsText.split('\n').map(s => s.trim()).filter(Boolean);
-    setConsumedSerials(prev => ({ ...prev, [goodId]: serials }));
+      setWipModalOpen(true);
+      setQuantity(1);
+      setConsumedSerials({});
+      setError('');
+      if (recipes.length > 0) setSelectedRecipe(recipes[0].id);
   };
 
+  const handleConsumedSerialsChange = (batchId: string, selectedOptions: HTMLCollectionOf<HTMLOptionElement>) => {
+      const serials = Array.from(selectedOptions).map(o => o.value);
+      setConsumedSerials(prev => ({ ...prev, [batchId]: serials }));
+  };
+
+  const handleAutoSelectAcrossBatches = (itemName: string, requiredCount: number, pooledAvailable: { good: ReceivedGood; serials: string[] }[]) => {
+      let remaining = requiredCount;
+      const newSelections = { ...consumedSerials };
+
+      // Clear existing for this item first to avoid duplicates or over-selection
+      pooledAvailable.forEach(p => {
+          if (newSelections[p.good.id]) delete newSelections[p.good.id];
+      });
+
+      for (const pool of pooledAvailable) {
+          if (remaining <= 0) break;
+          const take = Math.min(remaining, pool.serials.length);
+          const toSelect = pool.serials.slice(0, take);
+          
+          newSelections[pool.good.id] = toSelect;
+          remaining -= take;
+      }
+      
+      setConsumedSerials(newSelections);
+  };
+
+  const componentsForModal = useMemo(() => {
+    const recipe = recipes.find(r => r.id === selectedRecipe);
+    if (!recipe) return [];
+    
+    // Filter out ghost components (empty name and no ID) to prevent "Unknown Item" display
+    const validComponents = recipe.components.filter(c => 
+        (c.masterItemName && c.masterItemName.trim() !== '') || c.receivedGoodId
+    );
+
+    return validComponents.map(comp => {
+        const itemName = comp.masterItemName || (comp.receivedGoodId ? getGoodName(comp.receivedGoodId) : 'Unknown Item');
+        
+        // Robust Matching: Use trim() and case-insensitive check
+        const batches = receivedGoods.filter(g => {
+             const nameMatch = g.name.trim().toLowerCase() === itemName.trim().toLowerCase();
+             const idMatch = g.id === comp.receivedGoodId;
+             return nameMatch || idMatch;
+        }).sort((a, b) => a.timestamp - b.timestamp); // FIFO Order
+        
+        const pooledAvailable: { good: ReceivedGood; serials: string[] }[] = batches.map(b => ({
+            good: b,
+            serials: getAvailableSerialsForBatch(b)
+        })).filter(p => p.serials.length > 0);
+
+        const totalAvailableCount = pooledAvailable.reduce((acc, p) => acc + p.serials.length, 0);
+
+        return {
+            ...comp,
+            itemName,
+            totalAvailableCount,
+            pooledAvailable,
+            requiredSerialsCount: comp.quantityPerUnit * quantity
+        };
+    });
+  }, [selectedRecipe, quantity, recipes, receivedGoods, testResults]);
+
+  const masterItemOptions = useMemo(() => {
+      const uniqueNames = Array.from(new Set(receivedGoods.map(g => g.name)));
+      return uniqueNames.map(name => {
+          const items = receivedGoods.filter(g => g.name === name);
+          const totalStock = items.reduce((acc, g) => acc + g.quantity, 0);
+          
+          const makes = Array.from(new Set(items.map(i => i.makeModel).filter(Boolean)));
+          let makeDisplay = '';
+          if (makes.length === 1) makeDisplay = ` (${makes[0]})`;
+          else if (makes.length > 1) makeDisplay = ` (${makes.join(', ')})`;
+
+          const category = items[0]?.category;
+
+          return { 
+              id: name, 
+              label: `${name}${makeDisplay}`, 
+              subLabel: `${category} • Stock: ${totalStock}` 
+          };
+      });
+  }, [receivedGoods]);
+
+  const recipeOptions = useMemo(() => recipes.map(r => ({ id: r.id, label: r.name })), [recipes]);
+
+  const filteredWipItems = wipItems.filter(item => 
+    getRecipeName(item.recipeId).toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Implement Start Production
   const handleStartWip = () => {
     setError('');
     const recipe = recipes.find(r => r.id === selectedRecipe);
-    if (!recipe) {
-      setError('Selected recipe not found.');
-      return;
-    }
+    if (!recipe) return;
 
-    const stockChecks = recipe.components.map(comp => {
-      const stockItem = receivedGoods.find(g => g.id === comp.receivedGoodId);
-      const required = comp.quantityPerUnit * quantity;
-      return {
-        ...comp,
-        stockItem,
-        required,
-        sufficient: stockItem && stockItem.quantity >= required,
-      };
+    // 1. Group selection by Batch ID for deduction
+    const stockDeductions: { [batchId: string]: { count: number; serials: string[] } } = {};
+    const recipeCheckPassed = recipe.components.every(comp => {
+        // Skip invalid/empty components during validation
+        if (!comp.masterItemName && !comp.receivedGoodId) return true;
+
+        const required = comp.quantityPerUnit * quantity;
+        const itemName = comp.masterItemName || (comp.receivedGoodId ? getGoodName(comp.receivedGoodId) : '');
+        
+        // Find all serials selected for this master item across all batches
+        const batches = receivedGoods.filter(g => g.name === itemName || g.id === comp.receivedGoodId);
+        const selectedForThisItem = batches.flatMap(b => {
+            const sns = consumedSerials[b.id] || [];
+            if (sns.length > 0) {
+                stockDeductions[b.id] = { count: sns.length, serials: sns };
+            }
+            return sns;
+        });
+
+        if (selectedForThisItem.length !== required) {
+            setError(`Insufficient serials selected for ${itemName || 'component'}. Required: ${required}, Selected: ${selectedForThisItem.length}`);
+            return false;
+        }
+        return true;
     });
 
-    const insufficientStock = stockChecks.find(check => !check.sufficient);
-    if (insufficientStock) {
-      const stockItemName = insufficientStock.stockItem?.name || `ID: ${insufficientStock.receivedGoodId}`;
-      setError(`Insufficient stock for ${stockItemName}. Required: ${insufficientStock.required}, Available: ${insufficientStock.stockItem?.quantity || 0}.`);
-      return;
-    }
+    if (!recipeCheckPassed) return;
 
-    // Serial number validation
-    let serialsValid = true;
-    for (const check of stockChecks) {
-      if (check.stockItem && check.stockItem.serials.length > 0) {
-        const requiredSerialsCount = check.required;
-        const enteredSerials = consumedSerials[check.receivedGoodId] || [];
-        if (enteredSerials.length !== requiredSerialsCount) {
-          setError(`Please enter exactly ${requiredSerialsCount} serial numbers for ${check.stockItem.name}.`);
-          serialsValid = false;
-          break;
+    // 2. Perform Deductions
+    setReceivedGoods(prev => prev.map(good => {
+        const deduction = stockDeductions[good.id];
+        if (deduction) {
+            // Deduct quantity
+            const newQuantity = good.quantity - deduction.count;
+            const newSerials = good.serials.filter(s => !deduction.serials.includes(s));
+            
+            return {
+                ...good,
+                quantity: Math.max(0, newQuantity),
+                serials: newSerials
+            };
         }
-        const availableSerials = new Set(check.stockItem.serials);
-        const invalidSerial = enteredSerials.find(s => !availableSerials.has(s));
-        if (invalidSerial) {
-            setError(`Serial number "${invalidSerial}" for ${check.stockItem.name} is not available in stock.`);
-            serialsValid = false;
-            break;
-        }
-        const duplicateSerials = enteredSerials.filter((s, i) => enteredSerials.indexOf(s) !== i);
-        if(duplicateSerials.length > 0){
-            setError(`Duplicate serial number entered for ${check.stockItem.name}: ${duplicateSerials[0]}`);
-            serialsValid = false;
-            break;
-        }
-      }
-    }
-    if (!serialsValid) return;
+        return good;
+    }));
 
-    addLogEntry('Started Production', `Started production of ${quantity} units of '${recipe.name}'.`);
+    addLogEntry('Started Production', `Started production of ${quantity} units of SKU '${recipe.name}'.`);
 
-    const newReceivedGoods = [...receivedGoods];
-    stockChecks.forEach(check => {
-      const stockItemIndex = newReceivedGoods.findIndex(g => g.id === check.receivedGoodId);
-      if (stockItemIndex > -1) {
-        newReceivedGoods[stockItemIndex].quantity -= check.required;
-
-        const enteredSerials = consumedSerials[check.receivedGoodId];
-        if (enteredSerials && enteredSerials.length > 0) {
-          const originalSerials = newReceivedGoods[stockItemIndex].serials;
-          newReceivedGoods[stockItemIndex].serials = originalSerials.filter(s => !enteredSerials.includes(s));
-        }
-      }
-    });
-
-    setReceivedGoods(newReceivedGoods);
     const newWipItem: WIPItem = {
       id: `wip-${Date.now()}`,
       recipeId: recipe.id,
@@ -132,32 +370,245 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
     setWipModalOpen(false);
   };
 
+  const handlePrintBOM = () => {
+      const recipe = recipes.find(r => r.id === selectedRecipe);
+      if (!recipe) return;
+
+      const printWindow = window.open('', '', 'width=900,height=800');
+      if (!printWindow) return;
+
+      // Construct dynamic image URLs
+      const baseUrl = "https://bfkxdpripwjxenfvwpfu.supabase.co/storage/v1/object/public/Product%20drawings/";
+      const encodedName = encodeURIComponent(recipe.name);
+      
+      const pngUrl = `${baseUrl}${encodedName}.png`;
+      const jpegUrl = `${baseUrl}${encodedName}.jpeg`;
+      const jpgUrl = `${baseUrl}${encodedName}.jpg`;
+
+      const colors = ['#e3f2fd', '#e8f5e9', '#fff3e0', '#f3e5f5', '#e0f7fa', '#fce4ec', '#f1f8e9', '#fff8e1'];
+      const getColor = (i: number) => colors[i % colors.length];
+
+      const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Production BOM - ${recipe.name}</title>
+              <style>
+                  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #333; max-width: 210mm; margin: 0 auto; }
+                  .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+                  .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; }
+                  .header h2 { margin: 5px 0 0; font-size: 18px; color: #555; }
+                  .meta { display: flex; justify-content: space-between; margin-bottom: 20px; background: #f9f9f9; padding: 10px; border: 1px solid #ddd; }
+                  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+                  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                  th { background-color: #f2f2f2; font-weight: bold; text-transform: uppercase; }
+                  .serial-list { font-family: monospace; font-size: 10px; line-height: 1.4; }
+                  /* UPDATED: Removed white-space: nowrap; Added normal wrapping and break-word */
+                  .unit-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; margin-right: 4px; margin-bottom: 4px; font-weight: bold; border: 1px solid #ccc; white-space: normal; word-wrap: break-word; max-width: 100%; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  .drawing-section { margin-top: 30px; text-align: center; page-break-inside: avoid; border: 1px solid #eee; padding: 10px; }
+                  .drawing-section h3 { border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 15px; }
+                  img { max-width: 100%; max-height: 600px; object-fit: contain; }
+                  .footer { margin-top: 40px; font-size: 10px; text-align: center; color: #888; border-top: 1px solid #eee; padding-top: 10px; }
+                  @media print {
+                      body { padding: 0; }
+                      .no-print { display: none; }
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="header">
+                  <h1>Production Bill of Materials</h1>
+                  <h2>${recipe.name}</h2>
+              </div>
+              
+              <div class="meta">
+                  <div><strong>Date:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</div>
+                  <div><strong>Order Qty:</strong> ${quantity} Units</div>
+                  <div><strong>Job Ref:</strong> PROD-${Date.now().toString().slice(-6)}</div>
+              </div>
+
+              <h3>Component Allocation</h3>
+              <table>
+                  <thead>
+                      <tr>
+                          <th style="width: 25%">Component Item</th>
+                          <th style="width: 8%">Qty/Unit</th>
+                          <th style="width: 8%">Total</th>
+                          <th style="width: 59%">Assigned Serial Numbers (Color Coded by Unit)</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      ${recipe.components.map(comp => {
+                          const itemName = comp.masterItemName || (comp.receivedGoodId ? getGoodName(comp.receivedGoodId) : 'Unknown');
+                          const required = comp.quantityPerUnit * quantity;
+                          
+                          // Find consumed serials for this component (aggregating across possible batches)
+                          const batches = receivedGoods.filter(g => g.name === itemName || g.id === comp.receivedGoodId);
+                          const allSelected = batches.flatMap(b => consumedSerials[b.id] || []);
+                          
+                          // Group serials by Unit
+                          let serialsHtml = '';
+                          for(let i=0; i<quantity; i++) {
+                              const start = i * comp.quantityPerUnit;
+                              const end = start + comp.quantityPerUnit;
+                              const unitSerials = allSelected.slice(start, end);
+                              
+                              if (unitSerials.length > 0) {
+                                  const uColor = getColor(i);
+                                  serialsHtml += `<span class="unit-badge" style="background-color: ${uColor}">U${i+1}: ${unitSerials.join(', ')}</span> `;
+                              }
+                          }
+
+                          if (!serialsHtml && allSelected.length > 0) {
+                              serialsHtml = allSelected.join(', '); // Fallback if simple list
+                          } else if (!serialsHtml) {
+                              serialsHtml = '<span style="color:red; font-style:italic;">No specific serials allocated</span>';
+                          }
+                          
+                          return `
+                              <tr>
+                                  <td><strong>${itemName}</strong></td>
+                                  <td>${comp.quantityPerUnit}</td>
+                                  <td>${required}</td>
+                                  <td class="serial-list">
+                                      ${serialsHtml}
+                                  </td>
+                              </tr>
+                          `;
+                      }).join('')}
+                  </tbody>
+              </table>
+
+              <div class="drawing-section">
+                  <h3>Connection Diagram / Product Drawing</h3>
+                  <img 
+                      src="${pngUrl}" 
+                      alt="Drawing for ${recipe.name}"
+                      onerror="
+                          if (this.src === '${pngUrl}') { this.src = '${jpegUrl}'; }
+                          else if (this.src === '${jpegUrl}') { this.src = '${jpgUrl}'; }
+                          else { this.style.display = 'none'; document.getElementById('drawing-error').style.display = 'block'; }
+                      "
+                  />
+                  <div id="drawing-error" style="display:none; padding: 20px; color: #d9534f; background: #fdf7f7; border: 1px solid #d9534f; border-radius: 4px;">
+                      <strong>Drawing Not Found</strong><br/>
+                      System looked for: <em>${recipe.name}.png / .jpeg / .jpg</em> in the 'Product drawings' bucket.
+                  </div>
+              </div>
+
+              <div class="footer">
+                  Generated by Datlion Cnergy Plant OS
+              </div>
+
+              <script>
+                  setTimeout(() => {
+                      window.print();
+                  }, 1500);
+              </script>
+          </body>
+          </html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+  };
+
+  const handleInitiateReplacement = (wipItemId: string, goodId: string, damagedSerial: string) => {
+      const good = receivedGoods.find(g => g.id === goodId);
+      if (!good) return;
+
+      // Find all alternative batches of same item
+      const alternativeBatches = receivedGoods.filter(g => g.name === good.name);
+      const totalAvailable = alternativeBatches.reduce((acc, b) => acc + getAvailableSerialsForBatch(b).length, 0);
+
+      if (totalAvailable === 0) {
+          alert(`No available replacements in storage for item ${good.name}. Please add tested inventory.`);
+          return;
+      }
+
+      setReplacementTarget({ wipItemId, goodId, damagedSerial });
+      setReplacementSearchTerm('');
+      setIsReplacementModalOpen(true);
+  };
+
+  const handleConfirmReplacement = (replacementSerial: string, replacementBatchId: string) => {
+      if (!replacementTarget) return;
+      const { wipItemId, damagedSerial } = replacementTarget;
+
+      if (!confirm(`Confirm replacement of damaged unit ${damagedSerial} with ${replacementSerial}?`)) return;
+
+      setWipItems(prev => prev.map(w => {
+          if (w.id === wipItemId) {
+              const newSerials = { ...w.consumedSerials };
+              // Remove damaged from its original batch key
+              for (const bid in newSerials) {
+                  newSerials[bid] = (newSerials[bid] || []).filter(s => s !== damagedSerial);
+              }
+              // Add replacement to its batch key
+              newSerials[replacementBatchId] = [...(newSerials[replacementBatchId] || []), replacementSerial];
+              return { ...w, consumedSerials: newSerials };
+          }
+          return w;
+      }));
+
+      setReceivedGoods(prev => prev.map(g => {
+          if (g.id === replacementBatchId) {
+              return {
+                  ...g,
+                  quantity: g.quantity - 1,
+                  serials: g.serials.filter(s => s !== replacementSerial)
+              };
+          }
+          return g;
+      }));
+
+      addLogEntry('WIP Replacement', `Damaged serial ${damagedSerial} replaced by ${replacementSerial} in production batch.`);
+      
+      // Update local review state if open
+      setActiveWipItem(prev => {
+          if (!prev || prev.id !== wipItemId) return prev;
+          const newSerials = { ...prev.consumedSerials };
+          for (const bid in newSerials) {
+              newSerials[bid] = (newSerials[bid] || []).filter(s => s !== damagedSerial);
+          }
+          newSerials[replacementBatchId] = [...(newSerials[replacementBatchId] || []), replacementSerial];
+          return { ...prev, consumedSerials: newSerials };
+      });
+
+      setIsReplacementModalOpen(false);
+  };
+
+  const handleCreateRecipeFromDraft = () => {
+      let targetName = '';
+      if (productionDraft) {
+          const good = receivedGoods.find(g => g.id === productionDraft.receivedGoodId);
+          if (good) targetName = good.name;
+      }
+      setNewRecipeComponents([{ masterItemName: targetName, quantityPerUnit: 1 }]);
+      setRecipeModalOpen(true);
+  };
+
   const handleSaveRecipe = () => {
+    // Validate components to avoid ghost/empty items
+    const validComponents = newRecipeComponents.filter(c => c.masterItemName && c.masterItemName.trim() !== '' && c.quantityPerUnit > 0);
+    
+    if (validComponents.length === 0) {
+        alert("Please add at least one valid component.");
+        return;
+    }
+
     const newRecipe: Recipe = {
       id: `recipe-${Date.now()}`,
       name: newRecipeName,
-      components: newRecipeComponents.filter(c => c.receivedGoodId),
+      components: validComponents,
     };
     setRecipes(prev => [...prev, newRecipe]);
-    setRecipeModalOpen(false);
     setNewRecipeName('');
-    setNewRecipeComponents([{ receivedGoodId: '', quantityPerUnit: 1 }]);
+    setNewRecipeComponents([{ masterItemName: '', quantityPerUnit: 1 }]);
+    setSelectedRecipe(newRecipe.id);
+    setRecipeModalOpen(false); 
   };
 
-  const handleAddComponent = () => {
-    setNewRecipeComponents([...newRecipeComponents, { receivedGoodId: '', quantityPerUnit: 1 }]);
-  };
-  
-  const handleComponentChange = (index: number, field: string, value: string) => {
-    const updated = [...newRecipeComponents];
-    updated[index] = { ...updated[index], [field]: field === 'quantityPerUnit' ? Number(value) : value };
-    setNewRecipeComponents(updated);
-  };
-  
-  const handleRemoveComponent = (index: number) => {
-    setNewRecipeComponents(newRecipeComponents.filter((_, i) => i !== index));
-  }
-  
   const openFinishModal = (wipItem: WIPItem) => {
     setItemToFinish(wipItem);
     setIsFinishModalOpen(true);
@@ -166,229 +617,392 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
   const handleFinishProduction = () => {
     if(!itemToFinish) return;
 
-    addLogEntry('Finished Production', `Moved ${itemToFinish.quantity} units of '${getRecipeName(itemToFinish.recipeId)}' to Finished Goods.`);
-
+    // 1. Create Base Object
     const newFinishedGood: FinishedGood = {
       id: `fin-${Date.now()}`,
       recipeId: itemToFinish.recipeId,
       quantity: itemToFinish.quantity,
       timestamp: Date.now(),
-      consumedSerials: itemToFinish.consumedSerials,
+      consumedSerials: itemToFinish.consumedSerials || {}, 
       ...finishFormData,
-      inRepairUnitIds: [],
-      repairedUnitIds: [],
+      inRepairUnitIds: [], repairedUnitIds: [], unitDeliveries: {}, unitMetadata: {} 
     };
+
+    // 2. Generate Unit-Level Serial Map
+    // We pass the new good and existing list to generator
+    const unitIds = generateUnitIds(newFinishedGood, finishedGoods, recipes);
+    const unitMap: Record<string, Record<string, string[]>> = {};
+
+    unitIds.forEach((uId, idx) => {
+        unitMap[uId] = {};
+        // Distribute consumed serials evenly
+        Object.entries(newFinishedGood.consumedSerials).forEach(([rgId, serials]) => {
+             const totalQty = newFinishedGood.quantity;
+             const totalSerials = serials.length;
+             // Determine ratio (e.g. 4 cells per unit)
+             const perUnit = Math.floor(totalSerials / totalQty); 
+             
+             if (perUnit > 0) {
+                 const start = idx * perUnit;
+                 const end = start + perUnit;
+                 // Ensure we don't go out of bounds or take extras if division isn't clean
+                 const unitSpecificSerials = serials.slice(start, end);
+                 if (unitSpecificSerials.length > 0) {
+                     unitMap[uId][rgId] = unitSpecificSerials;
+                 }
+             }
+        });
+    });
+
+    newFinishedGood.unitComponentMap = unitMap;
     
     setFinishedGoods(prev => [newFinishedGood, ...prev]);
     setWipItems(prev => prev.filter(item => item.id !== itemToFinish.id));
-    
     setIsFinishModalOpen(false);
-    setItemToFinish(null);
-    setFinishFormData({ qualityRemarks: '', deliveredTo: '' });
+    addLogEntry('Finished Production', `Completed ${itemToFinish.quantity} units of SKU '${getRecipeName(itemToFinish.recipeId)}'.`);
   };
-  
-  const handleMarkAsRepaired = (repairItem: RepairItem) => {
-    // 1. Find the original FinishedGood
-    const originalGoodIndex = finishedGoods.findIndex(fg => fg.id === repairItem.finishedGoodId);
-    if (originalGoodIndex === -1) return;
-    
-    addLogEntry('Item Repaired', `Marked unit '${repairItem.unitId}' of '${getRecipeName(repairItem.recipeId)}' as repaired.`);
-
-    // 2. Update the FinishedGood item
-    const updatedFinishedGoods = [...finishedGoods];
-    const originalGood = updatedFinishedGoods[originalGoodIndex];
-    
-    const updatedGood = {
-        ...originalGood,
-        inRepairUnitIds: (originalGood.inRepairUnitIds || []).filter(id => id !== repairItem.unitId),
-        repairedUnitIds: [...(originalGood.repairedUnitIds || []), repairItem.unitId],
-    };
-    updatedFinishedGoods[originalGoodIndex] = updatedGood;
-    setFinishedGoods(updatedFinishedGoods);
-
-    // 3. Remove the item from repairItems
-    setRepairItems(prev => prev.filter(item => item.id !== repairItem.id));
-  };
-
-  const getRecipeName = (id: string) => recipes.find(r => r.id === id)?.name || 'Unknown Recipe';
-  const getGoodName = (id:string) => receivedGoods.find(g => g.id === id)?.name || 'Unknown Item';
-
-  const componentsForModal = useMemo(() => {
-    const recipe = recipes.find(r => r.id === selectedRecipe);
-    if (!recipe) return [];
-    
-    return recipe.components.map(comp => {
-        const good = receivedGoods.find(g => g.id === comp.receivedGoodId);
-        return {
-            ...comp,
-            goodName: good?.name || 'Unknown',
-            hasSerials: good && good.serials.length > 0,
-            requiredSerialsCount: comp.quantityPerUnit * quantity
-        };
-    }).filter(c => c.hasSerials);
-  }, [selectedRecipe, quantity, recipes, receivedGoods]);
-
-  const filteredWipItems = wipItems.filter(item => 
-    getRecipeName(item.recipeId).toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Work-in-Progress</h1>
         <div className="flex space-x-2">
-            <button onClick={() => setRecipeModalOpen(true)} className="flex items-center bg-gray-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-gray-700 transition-colors">
-              <PlusIcon /> <span className="ml-2">Manage Recipes</span>
+            <button onClick={() => setRecipeModalOpen(true)} className="flex items-center bg-[#0D0D0D] text-white px-4 py-2 rounded-lg shadow-md hover:bg-[#404040] transition-colors font-bold uppercase tracking-wide text-xs">
+              <PlusIcon /> <span className="ml-2">Manage SKUs</span>
             </button>
-            <button onClick={handleOpenWipModal} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition-colors">
+            <button onClick={handleOpenWipModal} className="flex items-center bg-[#8EBF45] text-[#0D0D0D] px-6 py-2 rounded-lg shadow-md hover:bg-[#658C3E] hover:text-white transition-all transform active:scale-95 font-bold uppercase tracking-wide text-xs">
               <PlusIcon /> <span className="ml-2">Start Production</span>
             </button>
         </div>
       </div>
 
       <div className="mb-6 relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clipRule="evenodd" />
-          </svg>
-        </div>
         <input 
           type="text" 
-          placeholder="Search by Product Recipe..." 
-          className="block w-full p-3 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
+          placeholder="Search by Product SKU..." 
+          className="block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45]"
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredWipItems.map(item => (
-          <div key={item.id} className="bg-white rounded-lg shadow-md p-5 flex flex-col justify-between hover:shadow-lg transition-shadow">
-            <div>
-              <h3 className="font-bold text-lg text-gray-900">{getRecipeName(item.recipeId)}</h3>
-              <p className="font-bold text-3xl text-blue-600 my-4">{item.quantity} <span className="text-lg">Units</span></p>
-              <p className="text-sm text-gray-500">Started: {new Date(item.timestamp).toLocaleDateString()}</p>
-            </div>
-             <div className="mt-4 flex items-center justify-end">
-                <button onClick={() => openFinishModal(item)} className="flex items-center bg-green-500 text-white px-3 py-1 rounded-lg shadow-sm hover:bg-green-600 transition-colors text-sm font-semibold">
-                  Mark as Finished <ArrowRightIcon />
-                </button>
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      {/* Repair Section */}
-      <div className="mt-12">
-        <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Items in Repair</h2>
-        {repairItems.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {repairItems.map(item => (
-                <div key={item.id} className="bg-red-50 border border-red-200 rounded-lg shadow-md p-5 flex flex-col justify-between">
-                <div>
-                    <h3 className="font-bold text-lg text-red-900">{getRecipeName(item.recipeId)}</h3>
-                    <p className="text-sm font-mono bg-red-100 p-2 rounded my-2 text-red-800 break-all">{item.unitId}</p>
-                    <p className="text-sm text-gray-500">Sent for repair: {new Date(item.timestamp).toLocaleDateString()}</p>
-                </div>
-                <div className="mt-4 flex items-center justify-end">
-                    <button onClick={() => handleMarkAsRepaired(item)} className="flex items-center bg-green-500 text-white px-3 py-1 rounded-lg shadow-sm hover:bg-green-600 transition-colors text-sm font-semibold">
-                        Repaired <SpannerIcon className="ml-1 h-4 w-4" />
-                    </button>
-                </div>
-                </div>
-            ))}
-            </div>
-        ) : (
-            <div className="text-center py-8 bg-white rounded-lg shadow-sm">
-                <p className="text-gray-500">No items currently in repair.</p>
-            </div>
-        )}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+        <table className="w-full text-left border-collapse">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="p-4 border-b font-semibold text-gray-600 w-10"></th>
+                <th className="p-4 border-b font-semibold text-gray-600">Product SKU</th>
+                <th className="p-4 border-b font-semibold text-gray-600">Units</th>
+                <th className="p-4 border-b font-semibold text-gray-600">Recipe Summary</th>
+                <th className="p-4 border-b font-semibold text-gray-600">Started</th>
+                <th className="p-4 border-b font-semibold text-gray-600 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredWipItems.map(item => {
+                const isExpanded = expandedWipId === item.id;
+                const recipe = recipes.find(r => r.id === item.recipeId);
+                
+                return (
+                  <React.Fragment key={item.id}>
+                    <tr className={`hover:bg-gray-50 transition-colors ${isExpanded ? 'bg-blue-50/30' : ''}`}>
+                      <td className="p-4 text-center">
+                        <button onClick={() => setExpandedWipId(isExpanded ? null : item.id)} className="text-gray-400 hover:text-[#658C3E]">
+                          {isExpanded ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}
+                        </button>
+                      </td>
+                      <td className="p-4 font-bold">{getRecipeName(item.recipeId)}</td>
+                      <td className="p-4"><span className="bg-[#A8BF75]/20 px-3 py-1 rounded-full text-[#658C3E] text-xs font-bold">{item.quantity}</span></td>
+                      <td className="p-4 text-xs text-gray-600">
+                          {recipe?.components.filter(c => c.masterItemName || c.receivedGoodId).map((c, i) => <div key={i}>• {c.masterItemName || (c.receivedGoodId ? getGoodName(c.receivedGoodId) : 'Item')} (x{c.quantityPerUnit})</div>)}
+                      </td>
+                      <td className="p-4 text-sm text-gray-500">{new Date(item.timestamp).toLocaleDateString()}</td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end space-x-3">
+                           <button onClick={() => { setActiveWipItem(item); setIsManageSerialsModalOpen(true); }} className="text-[#658C3E] hover:text-[#8EBF45] text-xs font-semibold flex items-center">
+                            <RefreshCw size={14} className="mr-1"/> Swap Serials
+                          </button>
+                          <button onClick={() => openFinishModal(item)} className="bg-[#8EBF45] text-[#0D0D0D] px-3 py-1.5 rounded-lg shadow-sm hover:bg-[#658C3E] hover:text-white transition-colors text-xs font-bold uppercase tracking-wide">
+                            Finish Batch
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="bg-slate-50">
+                        <td colSpan={6} className="p-4 border-b">
+                           <div className="animate-fade-in space-y-4">
+                             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider px-2">Traceability Mapping (Per Unit)</h4>
+                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {Array.from({ length: item.quantity }).map((_, uIdx) => (
+                                  <div key={uIdx} className="bg-white p-3 rounded border shadow-sm">
+                                     <p className="font-bold text-xs text-[#0D0D0D] mb-2 border-b pb-1">Unit Build #{uIdx+1}</p>
+                                     <div className="space-y-2">
+                                        {recipe?.components.filter(c => c.masterItemName || c.receivedGoodId).map((comp, cIdx) => {
+                                            const itemName = comp.masterItemName || (comp.receivedGoodId ? getGoodName(comp.receivedGoodId) : '');
+                                            // Sort by timestamp to ensure deterministic unit allocation visualization (FIFO)
+                                            const pooled = receivedGoods.filter(g => g.name === itemName || g.id === comp.receivedGoodId).sort((a, b) => a.timestamp - b.timestamp);
+                                            const allSelected = pooled.flatMap(b => (item.consumedSerials || {})[b.id] || []);
+                                            const unitSerials = allSelected.slice(uIdx * comp.quantityPerUnit, (uIdx + 1) * comp.quantityPerUnit);
+                                            
+                                            return (
+                                              <div key={cIdx}>
+                                                  <div className="flex justify-between items-baseline">
+                                                     <p className="text-[10px] font-bold text-gray-400 uppercase">{itemName}</p>
+                                                  </div>
+                                                  <div className="flex flex-wrap gap-1 mt-0.5">
+                                                      {unitSerials.map(sn => <span key={sn} className="bg-slate-100 px-1.5 py-0.5 rounded text-[10px] font-mono border text-slate-700">{sn}</span>)}
+                                                  </div>
+                                              </div>
+                                            );
+                                        })}
+                                     </div>
+                                  </div>
+                                ))}
+                             </div>
+                           </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+              {filteredWipItems.length === 0 && (
+                <tr><td colSpan={6} className="p-8 text-center text-gray-500 italic">No active production batches found.</td></tr>
+              )}
+            </tbody>
+        </table>
       </div>
 
+      {/* Modals */}
+      
+      {/* Replacement Modal */}
+      {replacementTarget && (
+          <Modal isOpen={isReplacementModalOpen} onClose={() => setIsReplacementModalOpen(false)} title="Select Replacement Component" size="lg">
+              <div className="space-y-4">
+                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200 mb-4">
+                      <p className="text-sm text-yellow-800">
+                          Replacing damaged unit <strong>{replacementTarget.damagedSerial}</strong>. 
+                          Select a tested unit from inventory to swap into production.
+                      </p>
+                  </div>
+                  <div className="relative mb-3">
+                        <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <input type="text" placeholder="Search replacement serial..." className="w-full border rounded-lg py-2 pl-9 text-sm outline-none focus:ring-2 focus:ring-[#8EBF45]" value={replacementSearchTerm} onChange={(e) => setReplacementSearchTerm(e.target.value)} />
+                  </div>
+                  <div className="border rounded-lg overflow-hidden max-h-[50vh] overflow-y-auto">
+                      <table className="w-full text-left text-sm">
+                          <thead className="bg-gray-100 sticky top-0 font-semibold text-gray-700">
+                              <tr>
+                                  <th className="p-3 border-b">Serial Number</th>
+                                  <th className="p-3 border-b">Batch / Invoice</th>
+                                  <th className="p-3 border-b text-right">Action</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                              {(() => {
+                                  const originalGood = receivedGoods.find(og => og.id === replacementTarget.goodId);
+                                  const alternativeBatches = receivedGoods.filter(g => g.name === originalGood?.name);
+                                  
+                                  const availableList = alternativeBatches.flatMap(batch => {
+                                      return getAvailableSerialsForBatch(batch)
+                                        .filter(s => s.toLowerCase().includes(replacementSearchTerm.toLowerCase()))
+                                        .map(sn => ({ sn, batchId: batch.id, invoice: batch.invoiceNumber }));
+                                  });
+
+                                  if (availableList.length === 0) return <tr><td colSpan={3} className="p-4 text-center text-gray-500">No matching serials found in inventory.</td></tr>;
+
+                                  return availableList.map(({sn, batchId, invoice}) => (
+                                      <tr key={`${batchId}-${sn}`} className="hover:bg-blue-50 transition-colors">
+                                          <td className="p-3 font-mono text-slate-800">{sn}</td>
+                                          <td className="p-3 text-xs text-gray-500">{invoice || 'N/A'}</td>
+                                          <td className="p-3 text-right">
+                                              <button onClick={() => handleConfirmReplacement(sn, batchId)} className="bg-[#8EBF45] text-[#0D0D0D] hover:bg-[#658C3E] hover:text-white px-3 py-1 rounded text-xs font-bold shadow-sm transition-colors">Select</button>
+                                          </td>
+                                      </tr>
+                                  ));
+                              })()}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </Modal>
+      )}
+
+      {/* Swap/Manage Serials Overview Modal */}
+      {activeWipItem && (
+          <Modal isOpen={isManageSerialsModalOpen} onClose={() => setIsManageSerialsModalOpen(false)} title="Manage Production Serials" size="lg">
+              <div className="space-y-4">
+                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
+                    <p className="text-sm text-blue-800">Review all serial numbers currently allocated to this production batch. You can <strong>Swap</strong> any component with available stock.</p>
+                  </div>
+                  {Object.entries(activeWipItem.consumedSerials || {}).map(([goodId, serials]) => {
+                      const good = receivedGoods.find(g => g.id === goodId);
+                      return (
+                          <div key={goodId} className="border rounded-lg overflow-hidden mb-3">
+                              <div className="bg-slate-100 p-2 text-sm font-bold border-b flex justify-between">
+                                  <span>{good?.name} ({good?.category || 'N/A'})</span>
+                                  <span className="text-slate-500 text-[10px] font-mono">Batch: {good?.invoiceNumber}</span>
+                              </div>
+                              <div className="p-3 bg-white">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                      {(serials as string[]).map(sn => (
+                                          <div key={sn} className="flex justify-between items-center bg-slate-50 border p-2 rounded-md group hover:border-[#8EBF45] transition-colors">
+                                              <span className="font-mono text-xs text-slate-700">{sn}</span>
+                                              <button 
+                                                onClick={() => handleInitiateReplacement(activeWipItem.id, goodId, sn)}
+                                                className="text-[10px] bg-red-50 text-red-600 px-2 py-1 rounded border border-red-200 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 hover:text-white"
+                                              >
+                                                  Swap / Damaged
+                                              </button>
+                                          </div>
+                                      ))}
+                                  </div>
+                              </div>
+                          </div>
+                      );
+                  })}
+                  <div className="flex justify-end pt-4">
+                      <button onClick={() => setIsManageSerialsModalOpen(false)} className="bg-[#0D0D0D] text-white px-6 py-2 rounded-lg font-bold">Done</button>
+                  </div>
+              </div>
+          </Modal>
+      )}
 
       {/* Start Production Modal */}
-      <Modal isOpen={isWipModalOpen} onClose={() => setWipModalOpen(false)} title="Start New Production" size="lg">
+      <Modal isOpen={isWipModalOpen} onClose={() => setWipModalOpen(false)} title="Start New Production" size="lg" persistent={true}>
         <div className="space-y-4">
-          {error && <div className="bg-red-100 text-red-700 p-3 rounded-md text-sm">{error}</div>}
+          {error && <div className="bg-red-100 text-red-700 p-3 rounded-md text-sm border-l-4 border-red-600">{error}</div>}
+          
           <div>
-            <label className="block text-sm font-medium text-gray-700">Product Recipe</label>
-            <select value={selectedRecipe} onChange={e => setSelectedRecipe(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
-              {recipes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Quantity to Produce</label>
-            <input type="number" value={quantity} onChange={e => setQuantity(Number(e.target.value))} min="1" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
-          </div>
-
-          {componentsForModal.length > 0 && (
-            <div className="pt-4 mt-4 border-t">
-              <h4 className="text-md font-semibold text-gray-800 mb-2">Consumed Serial Numbers</h4>
-              <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
-                {componentsForModal.map(comp => {
-                  const enteredCount = consumedSerials[comp.receivedGoodId]?.length || 0;
-                  return (
-                    <div key={comp.receivedGoodId}>
-                      <label className="block text-sm font-medium text-gray-700">{comp.goodName}</label>
-                      <p className="text-xs text-gray-500 mb-1">Enter {comp.requiredSerialsCount} serial numbers, one per line.</p>
-                      <textarea 
-                        rows={Math.min(10, Math.max(4, comp.requiredSerialsCount))} 
-                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-xs"
-                        onChange={(e) => handleConsumedSerialsChange(comp.receivedGoodId, e.target.value)}
-                        placeholder={`SN-001\nSN-002\nSN-003...`}
-                      />
-                      <p className={`text-xs text-right mt-1 font-medium ${enteredCount === comp.requiredSerialsCount ? 'text-green-600' : 'text-red-600'}`}>
-                        {enteredCount} / {comp.requiredSerialsCount} entered
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="flex justify-between items-end mb-1">
+                <label className="block text-sm font-medium text-gray-700">Product SKU (Recipe)</label>
+                <button 
+                    onClick={handleCreateRecipeFromDraft}
+                    className="text-[10px] text-[#658C3E] hover:text-[#8EBF45] font-bold flex items-center bg-white px-2 py-1 rounded border border-[#A8BF75] transition-colors"
+                >
+                    <PlusIcon /> New SKU
+                </button>
             </div>
-          )}
+            <SearchableSelect options={recipeOptions} value={selectedRecipe} onChange={setSelectedRecipe} placeholder="Search SKUs..." />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity to Produce</label>
+            <input type="number" value={quantity} onChange={e => setQuantity(Number(e.target.value))} min="1" className="w-full border rounded-md p-2 focus:ring-2 focus:ring-[#8EBF45] outline-none" />
+          </div>
 
-          <div className="flex justify-end pt-4">
-            <button onClick={handleStartWip} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Confirm & Deduct Stock</button>
+          <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-2 mt-4">
+            {componentsForModal.map(comp => (
+                <div key={comp.itemName} className="bg-gray-50 p-3 rounded-md border border-slate-200">
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="text-sm font-bold text-slate-800">{comp.itemName} <span className="text-gray-400 font-normal">(x{comp.quantityPerUnit}/unit)</span></label>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${comp.totalAvailableCount >= comp.requiredSerialsCount ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'}`}>
+                            Needs: {comp.requiredSerialsCount} | Stock: {comp.totalAvailableCount}
+                        </span>
+                    </div>
+                    
+                    <div className="flex gap-2 mb-2">
+                        <button 
+                            onClick={() => handleAutoSelectAcrossBatches(comp.itemName, comp.requiredSerialsCount, comp.pooledAvailable)} 
+                            className="text-[10px] bg-[#8EBF45]/20 text-[#0D0D0D] px-2 py-1 rounded hover:bg-[#8EBF45] font-bold disabled:opacity-50"
+                            disabled={comp.totalAvailableCount < comp.requiredSerialsCount}
+                        >
+                            Auto-Select FIFO
+                        </button>
+                        <button onClick={() => {
+                            const cleared = { ...consumedSerials };
+                            comp.pooledAvailable.forEach(b => delete cleared[b.good.id]);
+                            setConsumedSerials(cleared);
+                        }} className="text-[10px] bg-gray-200 text-gray-600 px-2 py-1 rounded hover:bg-gray-300 font-bold">Clear</button>
+                    </div>
+
+                    <div className="space-y-2">
+                        {comp.pooledAvailable.map(batch => (
+                            <div key={batch.good.id} className="bg-white p-2 border rounded text-xs shadow-sm">
+                                <div className="flex justify-between items-center mb-1">
+                                    <div>
+                                        <p className="font-bold text-[10px] text-gray-400 uppercase">Invoice: {batch.good.invoiceNumber || 'Manual'}</p>
+                                        {batch.good.makeModel && <p className="text-[10px] text-indigo-600 font-bold">{batch.good.makeModel}</p>}
+                                    </div>
+                                    <span className="text-[9px] text-slate-400">{new Date(batch.good.timestamp).toLocaleDateString()}</span>
+                                </div>
+                                <select 
+                                    multiple 
+                                    className="w-full border rounded h-24 font-mono text-[10px] p-1 focus:ring-1 focus:ring-[#8EBF45] outline-none" 
+                                    value={consumedSerials[batch.good.id] || []} 
+                                    onChange={(e) => handleConsumedSerialsChange(batch.good.id, e.target.selectedOptions)}
+                                >
+                                    {batch.serials.map(sn => <option key={sn} value={sn}>{sn}</option>)}
+                                </select>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
+          </div>
+
+          <div className="flex justify-end pt-4 border-t mt-4 gap-3">
+              <button 
+                  onClick={handlePrintBOM}
+                  className="bg-white text-[#0D0D0D] px-4 py-2.5 rounded-lg font-bold uppercase tracking-wide text-xs shadow-sm border border-gray-300 hover:bg-gray-50 flex items-center gap-2"
+              >
+                  <Printer size={16}/> Print BOM
+              </button>
+              <button onClick={handleStartWip} className="bg-[#8EBF45] text-[#0D0D0D] px-8 py-2.5 rounded-lg font-black uppercase tracking-widest text-sm shadow-md hover:bg-[#658C3E] hover:text-white transition-all transform active:scale-95">Confirm & Start Production</button>
           </div>
         </div>
       </Modal>
 
       {/* Manage Recipes Modal */}
-      <Modal isOpen={isRecipeModalOpen} onClose={() => setRecipeModalOpen(false)} title="Manage Recipes" size="lg">
+      <Modal isOpen={isRecipeModalOpen} onClose={() => setRecipeModalOpen(false)} title="Manage Product SKUs (Recipes)" size="lg">
         <div className="space-y-6">
-          <div className="p-4 border border-gray-200 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Create New Recipe</h3>
+          <div className="p-4 border rounded-lg bg-slate-50 border-slate-200">
+             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><PlusIcon /> Create New SKU</h3>
              <div className="space-y-4">
-                <div><label className="block text-sm font-medium text-gray-700">Recipe Name</label><input type="text" value={newRecipeName} onChange={e => setNewRecipeName(e.target.value)} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" /></div>
-                <h4 className="text-md font-semibold text-gray-800">Components</h4>
+                <input type="text" placeholder="SKU Name (e.g. 12V 100Ah Battery Pack)" value={newRecipeName} onChange={e => setNewRecipeName(e.target.value)} className="w-full p-2.5 border rounded-md shadow-sm outline-none focus:ring-2 focus:ring-[#8EBF45]" />
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Components List</h4>
                 {newRecipeComponents.map((comp, index) => (
-                  <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md">
-                    <select value={comp.receivedGoodId} onChange={e => handleComponentChange(index, 'receivedGoodId', e.target.value)} className="block w-2/3 border border-gray-300 rounded-md shadow-sm p-2 bg-white">
-                      <option value="">Select Raw Material</option>
-                      {receivedGoods.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                    </select>
-                    <input type="number" placeholder="Qty" value={comp.quantityPerUnit} onChange={e => handleComponentChange(index, 'quantityPerUnit', e.target.value)} min="1" className="block w-1/3 border border-gray-300 rounded-md shadow-sm p-2"/>
-                    <button onClick={() => handleRemoveComponent(index)} className="p-2 text-gray-400 hover:text-red-600"><TrashIcon /></button>
+                  <div key={index} className="flex gap-2 items-center bg-white p-2 border rounded-lg shadow-sm group">
+                    <div className="flex-1">
+                        <SearchableSelect options={masterItemOptions} value={comp.masterItemName || ''} onChange={(val) => {
+                            const updated = [...newRecipeComponents];
+                            updated[index].masterItemName = val;
+                            setNewRecipeComponents(updated);
+                        }} placeholder="Search Master Item Name..." />
+                    </div>
+                    <div className="w-20">
+                        <input type="number" placeholder="Qty" value={comp.quantityPerUnit} onChange={e => {
+                            const updated = [...newRecipeComponents];
+                            updated[index].quantityPerUnit = Number(e.target.value);
+                            setNewRecipeComponents(updated);
+                        }} className="w-full border rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-[#8EBF45]" />
+                    </div>
+                    <button onClick={() => setNewRecipeComponents(newRecipeComponents.filter((_, i) => i !== index))} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><TrashIcon/></button>
                   </div>
                 ))}
-                <button onClick={handleAddComponent} className="text-blue-600 text-sm font-medium">+ Add Component</button>
-             </div>
-             <div className="flex justify-end pt-4">
-                <button onClick={handleSaveRecipe} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Save Recipe</button>
+                <button onClick={() => setNewRecipeComponents([...newRecipeComponents, { masterItemName: '', quantityPerUnit: 1 }])} className="text-[#658C3E] text-xs font-bold hover:underline py-1">+ Add Component Item</button>
+                <div className="flex justify-end pt-2 border-t mt-2"><button onClick={handleSaveRecipe} className="bg-[#8EBF45] text-[#0D0D0D] px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#658C3E] hover:text-white transition-colors uppercase tracking-wide text-xs">Save Product SKU</button></div>
              </div>
           </div>
+          
           <div>
-            <h3 className="text-lg font-semibold mb-2">Existing Recipes</h3>
-            <ul className="space-y-2">
-              {recipes.map(r => (
-                <li key={r.id} className="p-3 bg-white border rounded-md">
-                  <p className="font-semibold">{r.name}</p>
-                  <ul className="list-disc pl-5 mt-1 text-sm text-gray-600">
-                    {r.components.map((c, i) => <li key={i}>{getGoodName(c.receivedGoodId)}: {c.quantityPerUnit} unit(s)</li>)}
-                  </ul>
-                </li>
-              ))}
-            </ul>
+              <h3 className="font-bold text-slate-800 mb-3 px-1">Registered SKUs</h3>
+              <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                  {recipes.map(r => (
+                      <div key={r.id} className="p-3 bg-white border rounded-lg flex justify-between items-center hover:shadow-md transition-shadow group">
+                          <div>
+                              <p className="font-bold text-sm text-slate-800">{r.name}</p>
+                              <div className="flex gap-2 mt-1">
+                                  <p className="text-[10px] text-gray-400 uppercase font-bold">{r.components.filter(c => c.masterItemName || c.receivedGoodId).length} components</p>
+                                  <span className="text-[10px] text-gray-300">|</span>
+                                  <p className="text-[10px] text-gray-400 font-mono">{r.id}</p>
+                              </div>
+                          </div>
+                          <button onClick={() => setRecipes(recipes.filter(re => re.id !== r.id))} className="p-2 text-red-100 group-hover:text-red-400 hover:bg-red-50 rounded-full transition-colors"><TrashIcon/></button>
+                      </div>
+                  ))}
+                  {recipes.length === 0 && <p className="text-center py-6 text-gray-400 italic text-sm">No recipes defined yet.</p>}
+              </div>
           </div>
         </div>
       </Modal>
@@ -396,21 +1010,17 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
       {/* Finish Production Modal */}
       {itemToFinish && <Modal isOpen={isFinishModalOpen} onClose={() => setIsFinishModalOpen(false)} title={`Complete Production: ${getRecipeName(itemToFinish.recipeId)}`}>
         <div className="space-y-4">
-          <p>You are moving <strong>{itemToFinish.quantity} units</strong> to Finished Goods.</p>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Quality Remarks</label>
-            <textarea value={finishFormData.qualityRemarks} onChange={e => setFinishFormData(p => ({...p, qualityRemarks: e.target.value}))} rows={3} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+          <div className="bg-[#8EBF45]/10 p-4 rounded-lg border border-[#A8BF75]/50 text-[#0D0D0D] text-sm">
+              <p className="font-bold mb-1">Ready for Release</p>
+              <p>You are moving <strong>{itemToFinish.quantity} units</strong> to Finished Goods. Serial numbers will be permanently mapped to Unit IDs.</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Delivered To Company (Optional)</label>
-            <input type="text" value={finishFormData.deliveredTo} onChange={e => setFinishFormData(p => ({...p, deliveredTo: e.target.value}))} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" />
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Quality Control Remarks</label>
+              <textarea value={finishFormData.qualityRemarks} onChange={e => setFinishFormData(p => ({...p, qualityRemarks: e.target.value}))} rows={4} placeholder="e.g. All checks passed, balancing verified, output 12.8V nominal..." className="w-full border rounded-md p-3 text-sm focus:ring-2 focus:ring-[#8EBF45] outline-none"></textarea>
           </div>
-          <div className="flex justify-end pt-4">
-            <button onClick={handleFinishProduction} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">Move to Finished Goods</button>
-          </div>
+          <div className="flex justify-end pt-4"><button onClick={handleFinishProduction} className="bg-[#8EBF45] text-[#0D0D0D] px-8 py-2.5 rounded-lg font-black uppercase tracking-widest text-sm shadow-lg hover:bg-[#658C3E] hover:text-white transition-all transform active:scale-95 flex items-center gap-2"><ArrowRightIcon size={18} className="m-0" /> Release to Inventory</button></div>
         </div>
       </Modal>}
-
     </div>
   );
 };

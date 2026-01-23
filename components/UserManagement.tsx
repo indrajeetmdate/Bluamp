@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import type { User } from '../types';
 import { PlusIcon } from './icons/PlusIcon';
@@ -35,11 +36,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onDel
   };
   
   const handleDelete = (usernameToDelete: string) => {
-    if (window.confirm(`Are you sure you want to delete the user "${usernameToDelete}"? This action cannot be undone.`)) {
-        const result = onDeleteUser(usernameToDelete);
-        if (result) {
-            alert(result); // Show error in an alert for delete action
-        }
+    const result = onDeleteUser(usernameToDelete);
+    if (result) {
+        alert(result); // Show error in an alert for delete action
     }
   };
 
@@ -49,7 +48,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onDel
         <h1 className="text-2xl font-bold text-gray-800">User Management</h1>
         <button
           onClick={() => { setIsModalOpen(true); setError(null); setUsername(''); setPassword(''); }}
-          className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition-colors"
+          className="flex items-center bg-[#8EBF45] text-[#0D0D0D] px-4 py-2 rounded-lg shadow-md hover:bg-[#658C3E] hover:text-white transition-colors font-black uppercase tracking-wide text-xs"
         >
           <PlusIcon />
           <span className="ml-2">Add New User</span>
@@ -70,14 +69,22 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onDel
               <tr key={user.username} className="hover:bg-gray-50">
                 <td className="p-4">{user.username}</td>
                 <td className="p-4">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-[#8EBF45]/20 text-[#658C3E]' : 'bg-gray-100 text-gray-800'}`}>
                         {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                     </span>
                 </td>
                 <td className="p-4 text-right">
                   {user.username !== currentUser.username ? (
                     <button 
-                      onClick={() => handleDelete(user.username)}
+                      onClick={() => {
+                        if (user.username === 'datlioncnergy@gmail.com') {
+                          alert('The default admin account cannot be deleted.');
+                          return;
+                        }
+                        if (window.confirm(`Are you sure you want to delete the user "${user.username}"? This action cannot be undone.`)) {
+                           handleDelete(user.username)
+                        }
+                      }}
                       className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-100 rounded-full transition-colors" 
                       title="Delete User"
                     >
@@ -118,7 +125,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onDel
           </div>
            <p className="text-sm text-gray-500">New users will be created with the 'User' role.</p>
           <div className="flex justify-end pt-4">
-            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Create User</button>
+            <button type="submit" className="bg-[#8EBF45] text-[#0D0D0D] px-4 py-2 rounded-lg hover:bg-[#658C3E] hover:text-white font-bold uppercase tracking-wide text-xs">Create User</button>
           </div>
         </form>
       </Modal>

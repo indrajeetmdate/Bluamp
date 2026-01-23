@@ -1,0 +1,561 @@
+
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../../supabaseClient';
+import { ExtractedInvoice } from '../../types';
+import { generateCSV, generateCompanyProfileCSV, downloadFile, safeRender } from '../../utils/invoiceUtils';
+import { FileSpreadsheet, FileJson, Loader2, RefreshCw, Search, FileText, Plus, X, Building, ChevronDown, ChevronUp, Trash2 } from './Icons';
+import { ImportIcon } from '../icons/ImportIcon';
+import { PencilIcon } from '../icons/PencilIcon';
+import Modal from '../Modal';
+
+interface NoteModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    parentInvoice: ExtractedInvoice | null;
+    onSuccess: () => void;
+    currentUser: { username: string } | null;
+}
+
+const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, parentInvoice, onSuccess, currentUser }) => {
+    const [noteType, setNoteType] = useState<'credit_note' | 'debit_note'>('credit_note');
+    const [noteNumber, setNoteNumber] = useState('');
+    const [noteDate, setNoteDate] = useState(new Date().toISOString().split('T')[0]);
+    const [amount, setAmount] = useState<number>(0);
+    const [reason, setReason] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if(isOpen && parentInvoice) {
+            setAmount(parentInvoice.totals?.grand_total || 0);
+            setNoteNumber(`CN-${Math.floor(Math.random() * 10000)}`);
+        }
+    }, [isOpen, parentInvoice]);
+
+    if (!isOpen || !parentInvoice) return null;
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        const noteRecord: any = {
+            ...parentInvoice,
+            id: undefined,
+            created_at: undefined,
+            timestamp: undefined, 
+            document_type: noteType,
+            filename: 'Manual Entry',
+            invoice_metadata: {
+                ...parentInvoice.invoice_metadata,
+                invoice_number: noteNumber,
+                invoice_date: noteDate,
+                related_invoice_number: parentInvoice.invoice_metadata.invoice_number,
+                note_reason: reason
+            },
+            items: [],
+            totals: {
+                ...parentInvoice.totals,
+                grand_total: amount,
+                subtotal_taxable: amount,
+                cgst_total: 0,
+                sgst_total: 0,
+                igst_total: 0
+            },
+            requires_review: false,
+            uploaded_by: currentUser?.username || 'system'
+        };
+        
+        delete noteRecord.id;
+        delete noteRecord.timestamp;
+
+        try {
+            const { error } = await supabase.from('invoices').insert([noteRecord]);
+            if (error) throw error;
+            onSuccess();
+            onClose();
+        } catch (err: any) {
+            alert("Failed to create note: " + err.message);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-[#0D0D0D]/50 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in">
+                <div className="bg-slate-50 border-b p-4 flex justify-between items-center">
+                    <h3 className="font-bold text-[#0D0D0D] flex items-center gap-2 font-brand">
+                        <FileText size={18} className="text-[#8EBF45]"/> 
+                        Add Debit/Credit Note
+                    </h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+                </div>
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <div className="bg-[#8EBF45]/10 p-3 rounded-lg text-sm text-[#658C3E] mb-4 border border-[#A8BF75]/30">
+                        Linked to Invoice: <span className="font-bold">{safeRender(parentInvoice.invoice_metadata?.invoice_number)}</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Type</label>
+                            <select 
+                                className="w-full p-2 border rounded-md border-slate-200 outline-none focus:border-[#8EBF45]"
+                                value={noteType} 
+                                onChange={(e) => setNoteType(e.target.value as any)}
+                            >
+                                <option value="credit_note">Credit Note</option>
+                                <option value="debit_note">Debit Note</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
+                            <input 
+                                type="date" 
+                                required
+                                className="w-full p-2 border rounded-md border-slate-200 outline-none focus:border-[#8EBF45]"
+                                value={noteDate}
+                                onChange={(e) => setNoteDate(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                         <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Note Number</label>
+                            <input 
+                                type="text" 
+                                required
+                                className="w-full p-2 border rounded-md border-slate-200 outline-none focus:border-[#8EBF45]"
+                                value={noteNumber}
+                                onChange={(e) => setNoteNumber(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Value (₹)</label>
+                            <input 
+                                type="number" 
+                                required
+                                step="0.01"
+                                className="w-full p-2 border rounded-md font-bold border-slate-200 outline-none focus:border-[#8EBF45]"
+                                value={amount}
+                                onChange={(e) => setAmount(parseFloat(e.target.value))}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Reason</label>
+                        <textarea 
+                            className="w-full p-2 border rounded-md text-sm border-slate-200 outline-none focus:border-[#8EBF45]"
+                            rows={2}
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            placeholder="e.g. Sales Return, Deficiency in service"
+                        />
+                    </div>
+
+                    <div className="pt-4 flex justify-end gap-3">
+                        <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">Cancel</button>
+                        <button 
+                            type="submit" 
+                            disabled={isSubmitting}
+                            className="bg-[#8EBF45] hover:bg-[#658C3E] text-[#0D0D0D] hover:text-white px-6 py-2 rounded-lg text-sm font-black uppercase tracking-widest flex items-center gap-2 shadow-lg transition-all"
+                        >
+                            {isSubmitting ? <Loader2 className="animate-spin" size={16}/> : <Plus size={16}/>}
+                            Create Note
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+interface DashboardProps {
+    currentUser: { username: string; role: 'admin' | 'user' } | null;
+    setView?: (view: any) => void;
+    onEditInvoice?: (invoice: ExtractedInvoice) => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoice }) => {
+    const [invoices, setInvoices] = useState<ExtractedInvoice[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
+    
+    // Filters
+    const [invoiceType, setInvoiceType] = useState<'purchase' | 'sales'>('purchase');
+    const [filterStart, setFilterStart] = useState('');
+    const [filterEnd, setFilterEnd] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    
+    const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+    const [selectedInvoice, setSelectedInvoice] = useState<ExtractedInvoice | null>(null);
+    const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+
+    const [importModalOpen, setImportModalOpen] = useState(false);
+    const [itemsToImport, setItemsToImport] = useState<any[]>([]);
+    const [sourceInvoice, setSourceInvoice] = useState<ExtractedInvoice | null>(null);
+
+    const fetchInvoices = async () => {
+        setLoading(true);
+        setErrorMsg(null);
+        try {
+            let query = supabase
+                .from('invoices')
+                .select('*')
+                .eq('requires_review', false)
+                .order('created_at', { ascending: false });
+
+            query = query.eq('source_type', invoiceType);
+
+            if (filterStart) {
+                query = query.gte('invoice_metadata->>invoice_date', filterStart);
+            }
+            if (filterEnd) {
+                query = query.lte('invoice_metadata->>invoice_date', filterEnd);
+            }
+
+            if (searchTerm) {
+                const searchQ = `invoice_metadata->>invoice_number.ilike.%${searchTerm}%,issuer_details->>name.ilike.%${searchTerm}%,receiver_details->>name.ilike.%${searchTerm}%`;
+                query = query.or(searchQ);
+            } else {
+                query = query.limit(100); 
+            }
+
+            const { data, error } = await query;
+
+            if (error) throw error;
+            setInvoices(data as ExtractedInvoice[]);
+        } catch (error: any) {
+            console.error('Error fetching invoices:', error);
+            setErrorMsg(error.message || "Failed to load invoices from database.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchInvoices();
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [searchTerm, filterStart, filterEnd, invoiceType]);
+
+    const handleExport = (format: 'csv' | 'json') => {
+        setExporting(true);
+        try {
+            if (invoices.length === 0) {
+                alert("No data to export");
+                return;
+            }
+            if (format === 'csv') {
+                const csv = generateCSV(invoices);
+                downloadFile(csv, `invoice_export_${new Date().toISOString().split('T')[0]}.csv`, 'csv');
+            } else {
+                const json = JSON.stringify(invoices, null, 2);
+                downloadFile(json, `invoice_export_${new Date().toISOString().split('T')[0]}.json`, 'json');
+            }
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const handleCompanyExport = () => {
+        setExporting(true);
+        try {
+            if (invoices.length === 0) {
+                alert("No data available to generate company profiles.");
+                return;
+            }
+            const csv = generateCompanyProfileCSV(invoices);
+            downloadFile(csv, `company_profiles_${new Date().toISOString().split('T')[0]}.csv`, 'csv');
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const handleImportToInventory = (invoice: ExtractedInvoice) => {
+        if (!invoice.items || invoice.items.length === 0) {
+            alert('This invoice has no items to import.');
+            return;
+        }
+
+        const items = invoice.items.map(item => ({
+            name: item.description || 'Unknown Item',
+            category: item.item_type || 'Uncategorized',
+            makeModel: item.make_model || '',
+            quantity: Number(item.quantity) || 0,
+            status: item.status || 'Not Damaged'
+        }));
+
+        setItemsToImport(items);
+        setSourceInvoice(invoice);
+        setImportModalOpen(true);
+    };
+
+    const handleImportFieldChange = (index: number, field: string, value: string | number) => {
+        const updated = [...itemsToImport];
+        updated[index] = { ...updated[index], [field]: value };
+        setItemsToImport(updated);
+    };
+
+    const handleAddItemToImport = () => {
+        setItemsToImport(prev => [...prev, { name: '', category: 'Uncategorized', makeModel: '', quantity: 1, status: 'Not Damaged' }]);
+    };
+
+    const handleRemoveItemFromImport = (index: number) => {
+        setItemsToImport(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleConfirmImport = () => {
+        const exportData = itemsToImport.map(item => ({
+            name: item.name,
+            category: item.category,
+            makeModel: item.makeModel,
+            supplier: sourceInvoice?.issuer_details?.name || 'Unknown',
+            invoiceNumber: sourceInvoice?.invoice_metadata?.invoice_number || 'Unknown',
+            quantity: Number(item.quantity),
+            status: item.status
+        }));
+
+        localStorage.setItem('pendingInventoryImport', JSON.stringify(exportData));
+        setImportModalOpen(false);
+        setSourceInvoice(null);
+        setItemsToImport([]);
+        
+        if (setView) setView('received');
+        else alert('Navigation not available. Go to Operations manually.');
+    };
+
+    const handleDeleteInvoice = async (id: string) => {
+        if (!id) return;
+        if (!confirm("Are you sure you want to delete this invoice? This action cannot be undone.")) return;
+        
+        try {
+            const { error } = await supabase.from('invoices').delete().match({ id: id });
+            if (error) throw error;
+            setInvoices(prev => prev.filter(inv => inv.id !== id));
+            alert("Invoice deleted successfully.");
+        } catch (err: any) {
+            console.error("Delete failed:", err);
+            alert("Error deleting invoice: " + (err.message || "Unknown error"));
+        }
+    };
+
+    const openNoteModal = (invoice: ExtractedInvoice) => {
+        setSelectedInvoice(invoice);
+        setIsNoteModalOpen(true);
+    };
+
+    const toggleRow = (id: string | undefined) => {
+        if (!id) return;
+        setExpandedRowId(expandedRowId === id ? null : id);
+    };
+
+    return (
+        <div className="max-w-7xl mx-auto animate-fade-in space-y-6 pb-20">
+            <NoteModal 
+                isOpen={isNoteModalOpen} 
+                onClose={() => setIsNoteModalOpen(false)} 
+                parentInvoice={selectedInvoice}
+                onSuccess={fetchInvoices}
+                currentUser={currentUser}
+            />
+
+            <Modal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} title="Confirm Inventory Import" persistent={true} size="xl">
+                <div className="space-y-4">
+                    <div className="bg-[#8EBF45]/10 border border-[#A8BF75]/30 p-3 rounded text-sm text-[#658C3E] mb-4">
+                        <p><strong>Review items before adding to stock.</strong> You can edit the names, categories, and quantities here.</p>
+                    </div>
+                    <div className="overflow-x-auto border rounded-md border-slate-200 max-h-[60vh]">
+                        <table className="w-full text-left text-sm text-slate-600">
+                            <thead className="bg-slate-50 text-[#0D0D0D] font-bold sticky top-0 z-10">
+                                <tr>
+                                    <th className="p-3 w-10">#</th>
+                                    <th className="p-3 min-w-[200px]">Item Name</th>
+                                    <th className="p-3 min-w-[120px]">Category</th>
+                                    <th className="p-3 min-w-[150px]">Make & Model</th>
+                                    <th className="p-3 w-24 text-right">Qty</th>
+                                    <th className="p-3 w-32">Status</th>
+                                    <th className="p-3 w-10"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 bg-white font-medium">
+                                {itemsToImport.map((item, idx) => (
+                                    <tr key={idx} className="hover:bg-slate-50">
+                                        <td className="p-3 text-xs text-slate-400">{idx + 1}</td>
+                                        <td className="p-3"><input className="w-full border border-slate-200 rounded px-2 py-1 outline-none focus:border-[#8EBF45]" value={item.name || ''} onChange={(e) => handleImportFieldChange(idx, 'name', e.target.value)} /></td>
+                                        <td className="p-3"><input className="w-full border border-slate-200 rounded px-2 py-1 outline-none focus:border-[#8EBF45]" value={item.category || ''} onChange={(e) => handleImportFieldChange(idx, 'category', e.target.value)} /></td>
+                                        <td className="p-3"><input className="w-full border border-slate-200 rounded px-2 py-1 outline-none focus:border-[#8EBF45]" value={item.makeModel || ''} onChange={(e) => handleImportFieldChange(idx, 'makeModel', e.target.value)} /></td>
+                                        <td className="p-3 text-right"><input type="number" className="w-full text-right border border-slate-200 rounded px-2 py-1 outline-none focus:border-[#8EBF45]" value={item.quantity} onChange={(e) => handleImportFieldChange(idx, 'quantity', e.target.value)} /></td>
+                                        <td className="p-3">
+                                            <select className="w-full border border-slate-200 rounded px-2 py-1 text-xs outline-none focus:border-[#8EBF45] bg-white" value={item.status} onChange={(e) => handleImportFieldChange(idx, 'status', e.target.value)}>
+                                                <option value="Not Damaged">Not Damaged</option>
+                                                <option value="Damaged">Damaged</option>
+                                                <option value="Returned">Returned</option>
+                                            </select>
+                                        </td>
+                                        <td className="p-3 text-center"><button onClick={() => handleRemoveItemFromImport(idx)} className="text-red-400 hover:text-red-600 p-1"><Trash2 size={16}/></button></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                        <button onClick={() => setImportModalOpen(false)} className="px-4 py-2 text-slate-600 border rounded-lg text-sm">Cancel</button>
+                        <button onClick={handleConfirmImport} className="bg-[#8EBF45] hover:bg-[#658C3E] text-[#0D0D0D] hover:text-white px-6 py-2 rounded-lg text-sm font-black uppercase tracking-widest flex items-center gap-2 shadow-lg"><ImportIcon /> Confirm Import</button>
+                    </div>
+                </div>
+            </Modal>
+
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 className="text-2xl font-black text-[#0D0D0D] font-brand tracking-tight">Invoice Dashboard</h2>
+                    <p className="text-slate-500 text-sm">Real-time view of records with expandable detailed view.</p>
+                </div>
+                
+                <div className="bg-slate-200 p-1 rounded-xl flex items-center shadow-inner">
+                    <button 
+                        onClick={() => setInvoiceType('purchase')}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${invoiceType === 'purchase' ? 'bg-[#8EBF45] text-[#0D0D0D] shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                        Purchase
+                    </button>
+                    <button 
+                        onClick={() => setInvoiceType('sales')}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${invoiceType === 'sales' ? 'bg-[#8EBF45] text-[#0D0D0D] shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                    >
+                        Sales
+                    </button>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    <button onClick={() => fetchInvoices()} className="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors" title="Refresh">
+                        <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+                    </button>
+                    <div className="flex bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                        <button onClick={() => handleExport('csv')} disabled={exporting} className="flex items-center gap-2 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 border-r transition-colors">
+                            <FileSpreadsheet size={16} className="text-[#8EBF45]" /> CSV
+                        </button>
+                        <button onClick={() => handleExport('json')} disabled={exporting} className="flex items-center gap-2 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                            <FileJson size={16} className="text-[#8EBF45]" /> JSON
+                        </button>
+                    </div>
+                    <button onClick={handleCompanyExport} disabled={exporting} className="flex items-center gap-2 bg-white border-2 border-[#A8BF75] text-[#658C3E] px-4 py-2 rounded-xl text-sm font-black uppercase tracking-widest shadow-sm hover:bg-[#A8BF75]/10 transition-colors">
+                        <Building size={16} /> Export Companies
+                    </button>
+                </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 grid md:grid-cols-12 gap-4 items-end">
+                <div className="md:col-span-6">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Search Invoices</label>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-2.5 text-slate-400 w-5 h-5" />
+                        <input type="text" className="w-full pl-10 p-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#8EBF45]/20 focus:border-[#8EBF45]" placeholder="Search by Invoice #, Supplier, or Customer..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    </div>
+                </div>
+                <div className="md:col-span-3">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">From Date</label>
+                    <input type="date" className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:border-[#8EBF45] outline-none" value={filterStart} onChange={(e) => setFilterStart(e.target.value)} />
+                </div>
+                <div className="md:col-span-3">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">To Date</label>
+                    <input type="date" className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:border-[#8EBF45] outline-none" value={filterEnd} onChange={(e) => setFilterEnd(e.target.value)} />
+                </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+                <div className="overflow-x-auto min-h-[400px]">
+                    <table className="w-full text-left text-sm text-slate-600">
+                        <thead className="bg-slate-50 text-[#0D0D0D] font-bold border-b border-slate-200">
+                            <tr>
+                                <th className="p-4 w-10"></th>
+                                <th className="p-4">Date</th>
+                                <th className="p-4">Issuer</th>
+                                <th className="p-4">Receiver</th>
+                                <th className="p-4">Inv #</th>
+                                <th className="p-4 text-right">Taxable</th>
+                                <th className="p-4 text-right">Total</th>
+                                <th className="p-4 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {loading ? (
+                                <tr><td colSpan={8} className="p-8 text-center text-slate-400"><Loader2 className="animate-spin mx-auto mb-2 text-[#8EBF45]" /> Loading data...</td></tr>
+                            ) : errorMsg ? (
+                                <tr><td colSpan={8} className="p-8 text-center text-red-500">Error: {errorMsg}</td></tr>
+                            ) : invoices.length === 0 ? (
+                                <tr><td colSpan={8} className="p-8 text-center text-slate-400">No {invoiceType} invoices found matching filters.</td></tr>
+                            ) : (
+                                invoices.map((inv) => (
+                                    <React.Fragment key={inv.id}>
+                                    <tr className={`hover:bg-slate-50 transition-colors group cursor-pointer ${expandedRowId === inv.id ? 'bg-[#8EBF45]/5' : ''}`} onClick={() => toggleRow(inv.id)}>
+                                        <td className="p-4 text-slate-400">{expandedRowId === inv.id ? <ChevronUp size={16} className="text-[#8EBF45]"/> : <ChevronDown size={16}/>}</td>
+                                        <td className="p-4 text-slate-500 whitespace-nowrap">{safeRender(inv.invoice_metadata?.invoice_date) || (inv.created_at ? new Date(inv.created_at).toLocaleDateString() : 'N/A')}</td>
+                                        <td className="p-4 font-bold text-[#0D0D0D]">{safeRender(inv.issuer_details?.name) || 'Unknown'}</td>
+                                        <td className="p-4 font-medium">{safeRender(inv.receiver_details?.name) || 'Unknown'}</td>
+                                        <td className="p-4 text-slate-500 font-mono font-bold">{safeRender(inv.invoice_metadata?.invoice_number) || '-'}</td>
+                                        <td className="p-4 text-right font-mono">{(inv.totals?.subtotal_taxable || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                        <td className="p-4 text-right font-black text-[#0D0D0D]">₹{(inv.totals?.grand_total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                        <td className="p-4 text-center flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                            {onEditInvoice && <button onClick={() => onEditInvoice(inv)} className="p-2 text-slate-400 hover:text-[#8EBF45] hover:bg-[#8EBF45]/5 rounded-lg transition-all" title="Edit"><PencilIcon className="w-4 h-4" /></button>}
+                                            {inv.document_type === 'invoice' && <button onClick={() => openNoteModal(inv)} className="p-2 text-[#658C3E] hover:bg-blue-50 rounded-lg text-xs font-bold" title="Add Note"><Plus size={14}/></button>}
+                                            {inv.source_type === 'purchase' && <button onClick={() => handleImportToInventory(inv)} className="p-2 text-[#658C3E] hover:bg-[#8EBF45]/5 rounded-lg text-xs font-bold" title="Import to Stock"><ImportIcon /></button>}
+                                            <button onClick={() => handleDeleteInvoice(inv.id as string)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={16} /></button>
+                                        </td>
+                                    </tr>
+                                    {expandedRowId === inv.id && (
+                                        <tr className="bg-slate-50 animate-fade-in">
+                                            <td colSpan={8} className="p-6 border-b border-[#A8BF75]/20">
+                                                <div className="grid md:grid-cols-2 gap-8">
+                                                    <div>
+                                                        <h4 className="text-xs font-black text-[#658C3E] uppercase tracking-widest mb-4">Line Items</h4>
+                                                        <div className="space-y-2">
+                                                            {inv.items?.map((item, i) => (
+                                                                <div key={i} className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                                                    <div className="flex-1">
+                                                                        <p className="text-sm font-bold text-[#0D0D0D]">{item.description}</p>
+                                                                        <p className="text-[10px] text-slate-400 uppercase font-black">HSN: {item.hsn_sac || 'N/A'} • Qty: {item.quantity}</p>
+                                                                    </div>
+                                                                    <div className="text-right ml-4">
+                                                                        <p className="text-sm font-black text-[#0D0D0D]">₹{item.total_value?.toLocaleString('en-IN')}</p>
+                                                                        <p className="text-[10px] text-[#658C3E] font-bold">@ {item.unit_price} / unit</p>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            {(!inv.items || inv.items.length === 0) && <p className="text-xs text-slate-400 italic">No line items recorded.</p>}
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                                                        <h4 className="text-xs font-black text-[#658C3E] uppercase tracking-widest mb-2">Invoice Summary</h4>
+                                                        <div className="space-y-2 text-sm">
+                                                            <div className="flex justify-between text-slate-500"><span>Taxable Subtotal</span><span className="font-mono">₹{inv.totals?.subtotal_taxable?.toLocaleString('en-IN')}</span></div>
+                                                            <div className="flex justify-between text-slate-500"><span>Total Tax (GST)</span><span className="font-mono">₹{((inv.totals?.cgst_total||0) + (inv.totals?.sgst_total||0) + (inv.totals?.igst_total||0)).toLocaleString('en-IN')}</span></div>
+                                                            <div className="border-t pt-2 flex justify-between font-black text-[#0D0D0D] text-lg"><span>Grand Total</span><span className="text-[#8EBF45]">₹{inv.totals?.grand_total?.toLocaleString('en-IN')}</span></div>
+                                                        </div>
+                                                        <div className="mt-6 pt-4 border-t border-slate-100">
+                                                             <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Additional Metadata</p>
+                                                             <div className="grid grid-cols-2 gap-y-2 text-xs">
+                                                                <span className="text-slate-400">Uploaded By:</span> <span className="font-bold">{inv.uploaded_by || 'Unknown'}</span>
+                                                                <span className="text-slate-400">Scan ID:</span> <span className="font-mono text-[10px] break-all">{inv.id}</span>
+                                                                {inv.invoice_metadata?.ewaybill_number && <><span className="text-slate-400">E-Way Bill:</span> <span className="font-bold">{inv.invoice_metadata.ewaybill_number}</span></>}
+                                                             </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    </React.Fragment>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Dashboard;
