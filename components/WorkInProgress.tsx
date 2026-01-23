@@ -322,7 +322,13 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
         const itemName = comp.masterItemName || (comp.receivedGoodId ? getGoodName(comp.receivedGoodId) : '');
         
         // Find all serials selected for this master item across all batches
-        const batches = receivedGoods.filter(g => g.name === itemName || g.id === comp.receivedGoodId);
+        // FIX: Use robust name matching (trim/lowercase) to handle minor discrepancies
+        const batches = receivedGoods.filter(g => {
+             const nameMatch = g.name.trim().toLowerCase() === itemName.trim().toLowerCase();
+             const idMatch = g.id === comp.receivedGoodId;
+             return nameMatch || idMatch;
+        });
+
         const selectedForThisItem = batches.flatMap(b => {
             const sns = consumedSerials[b.id] || [];
             if (sns.length > 0) {
