@@ -41,6 +41,10 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
     // Visibility States
     const [showSummarySection, setShowSummarySection] = useState(true);
 
+    // Editable labels for Billed To / Shipped To
+    const [billedToLabel, setBilledToLabel] = useState('Billed To');
+    const [shippedToLabel, setShippedToLabel] = useState('Shipped To');
+
     // Total visibility control for all columns
     const [visibleColumns, setVisibleColumns] = useState({
         index: true,
@@ -63,6 +67,17 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
     const logoInputRef = useRef<HTMLInputElement>(null);
     const stampInputRef = useRef<HTMLInputElement>(null);
     const signatureInputRef = useRef<HTMLInputElement>(null);
+
+    const updateShippedTo = (field: string, val: string) => {
+        setDoc(prev => ({
+            ...prev,
+            shipped_to_details: { ...(prev.shipped_to_details || {}), [field]: val }
+        }));
+    };
+
+    const copyReceiverToShipped = () => {
+        setDoc(prev => ({ ...prev, shipped_to_details: { ...prev.receiver_details } }));
+    };
 
     useEffect(() => {
         if (initialData) {
@@ -557,6 +572,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                             <h3 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2"><Wallet size={12} /> Bank Details</h3>
                             <div className="grid grid-cols-2 gap-2">
                                 <input className="w-full text-xs p-2 border rounded" placeholder="Bank Name" value={doc.issuer_details.bank_details?.bank_name || ''} onChange={e => updateBankDetails('bank_name', e.target.value)} />
+                                <input className="w-full text-xs p-2 border rounded" placeholder="A/c Holder Name" value={doc.issuer_details.bank_details?.account_name || ''} onChange={e => updateBankDetails('account_name', e.target.value)} />
                                 <input className="w-full text-xs p-2 border rounded" placeholder="Account No" value={doc.issuer_details.bank_details?.account_number || ''} onChange={e => updateBankDetails('account_number', e.target.value)} />
                                 <input className="w-full text-xs p-2 border rounded" placeholder="IFSC Code" value={doc.issuer_details.bank_details?.ifsc || ''} onChange={e => updateBankDetails('ifsc', e.target.value)} />
                                 <input className="w-full text-xs p-2 border rounded" placeholder="Branch" value={doc.issuer_details.bank_details?.branch || ''} onChange={e => updateBankDetails('branch', e.target.value)} />
@@ -564,10 +580,15 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                         </div>
                     </div>
 
-                    {/* Receiver */}
+                    {/* Receiver (Billed To) */}
                     <div className="bg-slate-50 p-3 rounded border">
-                        <div className="flex justify-between items-center mb-2"><h3 className="text-sm font-bold text-slate-700">To (Receiver)</h3>
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-sm font-bold text-slate-700">Billed To (Receiver)</h3>
                             {companyProfiles.length > 0 && (<select className="text-xs p-1 border rounded max-w-[120px]" onChange={(e) => loadCompanyProfile('receiver', e.target.value)}><option value="">Load Profile</option>{companyProfiles.map(cp => <option key={cp.id} value={cp.name}>{cp.name}</option>)}</select>)}
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs text-slate-400">Label:</span>
+                            <input className="text-xs p-1 border rounded flex-1" value={billedToLabel} onChange={e => setBilledToLabel(e.target.value)} />
                         </div>
                         <input className="w-full text-sm p-2 border rounded mb-2" placeholder="Client Name" value={doc.receiver_details.name || ''} onChange={e => updateParty('receiver', 'name', e.target.value)} />
                         <textarea className="w-full text-sm p-2 border rounded" placeholder="Address" rows={2} value={doc.receiver_details.address || ''} onChange={e => updateParty('receiver', 'address', e.target.value)} />
@@ -578,6 +599,24 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                         <div className="grid grid-cols-2 gap-2 mt-2">
                             <input className="w-full text-sm p-2 border rounded" placeholder="Email" value={doc.receiver_details.email || ''} onChange={e => updateParty('receiver', 'email', e.target.value)} />
                             <input className="w-full text-sm p-2 border rounded" placeholder="Phone" value={doc.receiver_details.phone || ''} onChange={e => updateParty('receiver', 'phone', e.target.value)} />
+                        </div>
+                    </div>
+
+                    {/* Shipped To */}
+                    <div className="bg-blue-50/50 p-3 rounded border">
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-sm font-bold text-slate-700">Shipped To</h3>
+                            <button onClick={copyReceiverToShipped} className="text-[10px] bg-white border rounded px-2 py-0.5 text-slate-500 hover:text-[#658C3E] hover:border-[#8EBF45]">Copy from Billed To</button>
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs text-slate-400">Label:</span>
+                            <input className="text-xs p-1 border rounded flex-1" value={shippedToLabel} onChange={e => setShippedToLabel(e.target.value)} />
+                        </div>
+                        <input className="w-full text-sm p-2 border rounded mb-2" placeholder="Name" value={doc.shipped_to_details?.name || ''} onChange={e => updateShippedTo('name', e.target.value)} />
+                        <textarea className="w-full text-sm p-2 border rounded" placeholder="Address" rows={2} value={doc.shipped_to_details?.address || ''} onChange={e => updateShippedTo('address', e.target.value)} />
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                            <input className="w-full text-sm p-2 border rounded" placeholder="GSTIN" value={doc.shipped_to_details?.gstin || ''} onChange={e => updateShippedTo('gstin', e.target.value)} />
+                            <input className="w-full text-sm p-2 border rounded" placeholder="Phone" value={doc.shipped_to_details?.phone || ''} onChange={e => updateShippedTo('phone', e.target.value)} />
                         </div>
                     </div>
                 </div>
@@ -637,11 +676,10 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                             </div>
                         </div>
 
-                        <div className="mb-4">
-                            <div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-                                    {docType === 'quotation' ? 'Quotation For' : docType === 'po' ? 'Vendor' : 'Billed To'}
-                                </p>
+                        <div className="mb-4 flex gap-6">
+                            {/* Billed To */}
+                            <div className="flex-1">
+                                <input className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 bg-transparent border-none outline-none w-full p-0" value={billedToLabel} onChange={e => setBilledToLabel(e.target.value)} />
                                 <h3 className="font-bold text-sm text-slate-900 leading-tight">{safeRender(doc.receiver_details.name) || 'Client Name'}</h3>
                                 <p className="text-xs text-slate-600 whitespace-pre-line mb-1 leading-tight">{safeRender(doc.receiver_details.address)}</p>
                                 <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
@@ -649,6 +687,16 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                     {doc.receiver_details.pan && <span><strong>PAN:</strong> {doc.receiver_details.pan}</span>}
                                     {doc.receiver_details.email && <span>{doc.receiver_details.email}</span>}
                                     {doc.receiver_details.phone && <span>Ph: {doc.receiver_details.phone}</span>}
+                                </div>
+                            </div>
+                            {/* Shipped To */}
+                            <div className="flex-1">
+                                <input className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5 bg-transparent border-none outline-none w-full p-0" value={shippedToLabel} onChange={e => setShippedToLabel(e.target.value)} />
+                                <h3 className="font-bold text-sm text-slate-900 leading-tight">{safeRender(doc.shipped_to_details?.name) || safeRender(doc.receiver_details.name) || 'Client Name'}</h3>
+                                <p className="text-xs text-slate-600 whitespace-pre-line mb-1 leading-tight">{safeRender(doc.shipped_to_details?.address) || safeRender(doc.receiver_details.address)}</p>
+                                <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
+                                    {(doc.shipped_to_details?.gstin || doc.receiver_details.gstin) && <span><strong>GSTIN:</strong> {doc.shipped_to_details?.gstin || doc.receiver_details.gstin}</span>}
+                                    {(doc.shipped_to_details?.phone || doc.receiver_details.phone) && <span>Ph: {doc.shipped_to_details?.phone || doc.receiver_details.phone}</span>}
                                 </div>
                             </div>
                         </div>
@@ -806,6 +854,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                             <h4 className="font-bold text-[10px] text-slate-500 uppercase mb-1">Bank Details</h4>
                                             <div className="text-[10px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
                                                 <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
+                                                {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
                                                 <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
                                                 <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
                                             </div>
@@ -890,16 +939,27 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                         </div>
                                     </div>
 
-                                    {/* ---- RECEIVER ---- */}
-                                    <div className="mb-3">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{docType === 'quotation' ? 'Quotation For' : docType === 'po' ? 'Vendor' : 'Billed To'}</p>
-                                        <h3 className="font-bold text-sm text-slate-900 leading-tight">{safeRender(doc.receiver_details.name) || 'Client Name'}</h3>
-                                        <p className="text-xs text-slate-600 whitespace-pre-line mb-1 leading-tight">{safeRender(doc.receiver_details.address)}</p>
-                                        <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
-                                            {doc.receiver_details.gstin && <span><strong>GSTIN:</strong> {doc.receiver_details.gstin}</span>}
-                                            {doc.receiver_details.pan && <span><strong>PAN:</strong> {doc.receiver_details.pan}</span>}
-                                            {doc.receiver_details.email && <span>{doc.receiver_details.email}</span>}
-                                            {doc.receiver_details.phone && <span>Ph: {doc.receiver_details.phone}</span>}
+                                    {/* ---- RECEIVER (Billed + Shipped) ---- */}
+                                    <div className="mb-3 flex gap-6">
+                                        <div className="flex-1">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{billedToLabel}</p>
+                                            <h3 className="font-bold text-sm text-slate-900 leading-tight">{safeRender(doc.receiver_details.name) || 'Client Name'}</h3>
+                                            <p className="text-xs text-slate-600 whitespace-pre-line mb-1 leading-tight">{safeRender(doc.receiver_details.address)}</p>
+                                            <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
+                                                {doc.receiver_details.gstin && <span><strong>GSTIN:</strong> {doc.receiver_details.gstin}</span>}
+                                                {doc.receiver_details.pan && <span><strong>PAN:</strong> {doc.receiver_details.pan}</span>}
+                                                {doc.receiver_details.email && <span>{doc.receiver_details.email}</span>}
+                                                {doc.receiver_details.phone && <span>Ph: {doc.receiver_details.phone}</span>}
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{shippedToLabel}</p>
+                                            <h3 className="font-bold text-sm text-slate-900 leading-tight">{safeRender(doc.shipped_to_details?.name) || safeRender(doc.receiver_details.name) || 'Client Name'}</h3>
+                                            <p className="text-xs text-slate-600 whitespace-pre-line mb-1 leading-tight">{safeRender(doc.shipped_to_details?.address) || safeRender(doc.receiver_details.address)}</p>
+                                            <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
+                                                {(doc.shipped_to_details?.gstin || doc.receiver_details.gstin) && <span><strong>GSTIN:</strong> {doc.shipped_to_details?.gstin || doc.receiver_details.gstin}</span>}
+                                                {(doc.shipped_to_details?.phone || doc.receiver_details.phone) && <span>Ph: {doc.shipped_to_details?.phone || doc.receiver_details.phone}</span>}
+                                            </div>
                                         </div>
                                     </div>
 
@@ -993,6 +1053,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                                         <h4 className="font-bold text-[9px] text-slate-500 uppercase mb-0.5">Bank Details</h4>
                                                         <div className="text-[9px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
                                                             <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
+                                                            {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
                                                             <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
                                                             <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
                                                         </div>

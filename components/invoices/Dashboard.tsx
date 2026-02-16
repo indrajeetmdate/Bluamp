@@ -3,10 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { ExtractedInvoice } from '../../types';
 import { generateCSV, generateCompanyProfileCSV, downloadFile, safeRender } from '../../utils/invoiceUtils';
-import { FileSpreadsheet, FileJson, Loader2, RefreshCw, Search, FileText, Plus, X, Building, ChevronDown, ChevronUp, Trash2 } from './Icons';
+import { FileSpreadsheet, FileJson, Loader2, RefreshCw, Search, FileText, Plus, X, Building, ChevronDown, ChevronUp, Trash2, Download } from './Icons';
 import { ImportIcon } from '../icons/ImportIcon';
 import { PencilIcon } from '../icons/PencilIcon';
 import Modal from '../Modal';
+import InvoicePrintView from './InvoicePrintView';
 
 interface NoteModalProps {
     isOpen: boolean;
@@ -25,7 +26,7 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, parentInvoice, o
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        if(isOpen && parentInvoice) {
+        if (isOpen && parentInvoice) {
             setAmount(parentInvoice.totals?.grand_total || 0);
             setNoteNumber(`CN-${Math.floor(Math.random() * 10000)}`);
         }
@@ -41,7 +42,7 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, parentInvoice, o
             ...parentInvoice,
             id: undefined,
             created_at: undefined,
-            timestamp: undefined, 
+            timestamp: undefined,
             document_type: noteType,
             filename: 'Manual Entry',
             invoice_metadata: {
@@ -63,7 +64,7 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, parentInvoice, o
             requires_review: false,
             uploaded_by: currentUser?.username || 'system'
         };
-        
+
         delete noteRecord.id;
         delete noteRecord.timestamp;
 
@@ -84,10 +85,10 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, parentInvoice, o
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in">
                 <div className="bg-slate-50 border-b p-4 flex justify-between items-center">
                     <h3 className="font-bold text-[#0D0D0D] flex items-center gap-2 font-brand">
-                        <FileText size={18} className="text-[#8EBF45]"/> 
+                        <FileText size={18} className="text-[#8EBF45]" />
                         Add Debit/Credit Note
                     </h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <div className="bg-[#8EBF45]/10 p-3 rounded-lg text-sm text-[#658C3E] mb-4 border border-[#A8BF75]/30">
@@ -97,9 +98,9 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, parentInvoice, o
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Type</label>
-                            <select 
+                            <select
                                 className="w-full p-2 border rounded-md border-slate-200 outline-none focus:border-[#8EBF45]"
-                                value={noteType} 
+                                value={noteType}
                                 onChange={(e) => setNoteType(e.target.value as any)}
                             >
                                 <option value="credit_note">Credit Note</option>
@@ -108,8 +109,8 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, parentInvoice, o
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
-                            <input 
-                                type="date" 
+                            <input
+                                type="date"
                                 required
                                 className="w-full p-2 border rounded-md border-slate-200 outline-none focus:border-[#8EBF45]"
                                 value={noteDate}
@@ -119,10 +120,10 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, parentInvoice, o
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                         <div>
+                        <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Note Number</label>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 required
                                 className="w-full p-2 border rounded-md border-slate-200 outline-none focus:border-[#8EBF45]"
                                 value={noteNumber}
@@ -131,8 +132,8 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, parentInvoice, o
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Value (₹)</label>
-                            <input 
-                                type="number" 
+                            <input
+                                type="number"
                                 required
                                 step="0.01"
                                 className="w-full p-2 border rounded-md font-bold border-slate-200 outline-none focus:border-[#8EBF45]"
@@ -144,7 +145,7 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, parentInvoice, o
 
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Reason</label>
-                        <textarea 
+                        <textarea
                             className="w-full p-2 border rounded-md text-sm border-slate-200 outline-none focus:border-[#8EBF45]"
                             rows={2}
                             value={reason}
@@ -155,12 +156,12 @@ const NoteModal: React.FC<NoteModalProps> = ({ isOpen, onClose, parentInvoice, o
 
                     <div className="pt-4 flex justify-end gap-3">
                         <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm">Cancel</button>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             disabled={isSubmitting}
                             className="bg-[#8EBF45] hover:bg-[#658C3E] text-[#0D0D0D] hover:text-white px-6 py-2 rounded-lg text-sm font-black uppercase tracking-widest flex items-center gap-2 shadow-lg transition-all"
                         >
-                            {isSubmitting ? <Loader2 className="animate-spin" size={16}/> : <Plus size={16}/>}
+                            {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
                             Create Note
                         </button>
                     </div>
@@ -180,14 +181,14 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
     const [invoices, setInvoices] = useState<ExtractedInvoice[]>([]);
     const [loading, setLoading] = useState(true);
     const [exporting, setExporting] = useState(false);
-    
+
     // Filters
     const [invoiceType, setInvoiceType] = useState<'purchase' | 'sales'>('purchase');
     const [filterStart, setFilterStart] = useState('');
     const [filterEnd, setFilterEnd] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
-    
+
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
     const [selectedInvoice, setSelectedInvoice] = useState<ExtractedInvoice | null>(null);
     const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
@@ -195,6 +196,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
     const [importModalOpen, setImportModalOpen] = useState(false);
     const [itemsToImport, setItemsToImport] = useState<any[]>([]);
     const [sourceInvoice, setSourceInvoice] = useState<ExtractedInvoice | null>(null);
+    const [printInvoice, setPrintInvoice] = useState<ExtractedInvoice | null>(null);
 
     const fetchInvoices = async () => {
         setLoading(true);
@@ -219,7 +221,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
                 const searchQ = `invoice_metadata->>invoice_number.ilike.%${searchTerm}%,issuer_details->>name.ilike.%${searchTerm}%,receiver_details->>name.ilike.%${searchTerm}%`;
                 query = query.or(searchQ);
             } else {
-                query = query.limit(100); 
+                query = query.limit(100);
             }
 
             const { data, error } = await query;
@@ -322,7 +324,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
         setImportModalOpen(false);
         setSourceInvoice(null);
         setItemsToImport([]);
-        
+
         if (setView) setView('received');
         else alert('Navigation not available. Go to Operations manually.');
     };
@@ -330,7 +332,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
     const handleDeleteInvoice = async (id: string) => {
         if (!id) return;
         if (!confirm("Are you sure you want to delete this invoice? This action cannot be undone.")) return;
-        
+
         try {
             const { error } = await supabase.from('invoices').delete().match({ id: id });
             if (error) throw error;
@@ -354,9 +356,9 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
 
     return (
         <div className="max-w-7xl mx-auto animate-fade-in space-y-6 pb-20">
-            <NoteModal 
-                isOpen={isNoteModalOpen} 
-                onClose={() => setIsNoteModalOpen(false)} 
+            <NoteModal
+                isOpen={isNoteModalOpen}
+                onClose={() => setIsNoteModalOpen(false)}
                 parentInvoice={selectedInvoice}
                 onSuccess={fetchInvoices}
                 currentUser={currentUser}
@@ -395,7 +397,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
                                                 <option value="Returned">Returned</option>
                                             </select>
                                         </td>
-                                        <td className="p-3 text-center"><button onClick={() => handleRemoveItemFromImport(idx)} className="text-red-400 hover:text-red-600 p-1"><Trash2 size={16}/></button></td>
+                                        <td className="p-3 text-center"><button onClick={() => handleRemoveItemFromImport(idx)} className="text-red-400 hover:text-red-600 p-1"><Trash2 size={16} /></button></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -413,15 +415,15 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
                     <h2 className="text-2xl font-black text-[#0D0D0D] font-brand tracking-tight">Invoice Dashboard</h2>
                     <p className="text-slate-500 text-sm">Real-time view of records with expandable detailed view.</p>
                 </div>
-                
+
                 <div className="bg-slate-200 p-1 rounded-xl flex items-center shadow-inner">
-                    <button 
+                    <button
                         onClick={() => setInvoiceType('purchase')}
                         className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${invoiceType === 'purchase' ? 'bg-[#8EBF45] text-[#0D0D0D] shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                     >
                         Purchase
                     </button>
-                    <button 
+                    <button
                         onClick={() => setInvoiceType('sales')}
                         className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${invoiceType === 'sales' ? 'bg-[#8EBF45] text-[#0D0D0D] shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                     >
@@ -490,63 +492,64 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
                             ) : (
                                 invoices.map((inv) => (
                                     <React.Fragment key={inv.id}>
-                                    <tr className={`hover:bg-slate-50 transition-colors group cursor-pointer ${expandedRowId === inv.id ? 'bg-[#8EBF45]/5' : ''}`} onClick={() => toggleRow(inv.id)}>
-                                        <td className="p-4 text-slate-400">{expandedRowId === inv.id ? <ChevronUp size={16} className="text-[#8EBF45]"/> : <ChevronDown size={16}/>}</td>
-                                        <td className="p-4 text-slate-500 whitespace-nowrap">{safeRender(inv.invoice_metadata?.invoice_date) || (inv.created_at ? new Date(inv.created_at).toLocaleDateString() : 'N/A')}</td>
-                                        <td className="p-4 font-bold text-[#0D0D0D]">{safeRender(inv.issuer_details?.name) || 'Unknown'}</td>
-                                        <td className="p-4 font-medium">{safeRender(inv.receiver_details?.name) || 'Unknown'}</td>
-                                        <td className="p-4 text-slate-500 font-mono font-bold">{safeRender(inv.invoice_metadata?.invoice_number) || '-'}</td>
-                                        <td className="p-4 text-right font-mono">{(inv.totals?.subtotal_taxable || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                        <td className="p-4 text-right font-black text-[#0D0D0D]">₹{(inv.totals?.grand_total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                                        <td className="p-4 text-center flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                            {onEditInvoice && <button onClick={() => onEditInvoice(inv)} className="p-2 text-slate-400 hover:text-[#8EBF45] hover:bg-[#8EBF45]/5 rounded-lg transition-all" title="Edit"><PencilIcon className="w-4 h-4" /></button>}
-                                            {inv.document_type === 'invoice' && <button onClick={() => openNoteModal(inv)} className="p-2 text-[#658C3E] hover:bg-blue-50 rounded-lg text-xs font-bold" title="Add Note"><Plus size={14}/></button>}
-                                            {inv.source_type === 'purchase' && <button onClick={() => handleImportToInventory(inv)} className="p-2 text-[#658C3E] hover:bg-[#8EBF45]/5 rounded-lg text-xs font-bold" title="Import to Stock"><ImportIcon /></button>}
-                                            <button onClick={() => handleDeleteInvoice(inv.id as string)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={16} /></button>
-                                        </td>
-                                    </tr>
-                                    {expandedRowId === inv.id && (
-                                        <tr className="bg-slate-50 animate-fade-in">
-                                            <td colSpan={8} className="p-6 border-b border-[#A8BF75]/20">
-                                                <div className="grid md:grid-cols-2 gap-8">
-                                                    <div>
-                                                        <h4 className="text-xs font-black text-[#658C3E] uppercase tracking-widest mb-4">Line Items</h4>
-                                                        <div className="space-y-2">
-                                                            {inv.items?.map((item, i) => (
-                                                                <div key={i} className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                                                                    <div className="flex-1">
-                                                                        <p className="text-sm font-bold text-[#0D0D0D]">{item.description}</p>
-                                                                        <p className="text-[10px] text-slate-400 uppercase font-black">HSN: {item.hsn_sac || 'N/A'} • Qty: {item.quantity}</p>
-                                                                    </div>
-                                                                    <div className="text-right ml-4">
-                                                                        <p className="text-sm font-black text-[#0D0D0D]">₹{item.total_value?.toLocaleString('en-IN')}</p>
-                                                                        <p className="text-[10px] text-[#658C3E] font-bold">@ {item.unit_price} / unit</p>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                            {(!inv.items || inv.items.length === 0) && <p className="text-xs text-slate-400 italic">No line items recorded.</p>}
-                                                        </div>
-                                                    </div>
-                                                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                                                        <h4 className="text-xs font-black text-[#658C3E] uppercase tracking-widest mb-2">Invoice Summary</h4>
-                                                        <div className="space-y-2 text-sm">
-                                                            <div className="flex justify-between text-slate-500"><span>Taxable Subtotal</span><span className="font-mono">₹{inv.totals?.subtotal_taxable?.toLocaleString('en-IN')}</span></div>
-                                                            <div className="flex justify-between text-slate-500"><span>Total Tax (GST)</span><span className="font-mono">₹{((inv.totals?.cgst_total||0) + (inv.totals?.sgst_total||0) + (inv.totals?.igst_total||0)).toLocaleString('en-IN')}</span></div>
-                                                            <div className="border-t pt-2 flex justify-between font-black text-[#0D0D0D] text-lg"><span>Grand Total</span><span className="text-[#8EBF45]">₹{inv.totals?.grand_total?.toLocaleString('en-IN')}</span></div>
-                                                        </div>
-                                                        <div className="mt-6 pt-4 border-t border-slate-100">
-                                                             <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Additional Metadata</p>
-                                                             <div className="grid grid-cols-2 gap-y-2 text-xs">
-                                                                <span className="text-slate-400">Uploaded By:</span> <span className="font-bold">{inv.uploaded_by || 'Unknown'}</span>
-                                                                <span className="text-slate-400">Scan ID:</span> <span className="font-mono text-[10px] break-all">{inv.id}</span>
-                                                                {inv.invoice_metadata?.ewaybill_number && <><span className="text-slate-400">E-Way Bill:</span> <span className="font-bold">{inv.invoice_metadata.ewaybill_number}</span></>}
-                                                             </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                        <tr className={`hover:bg-slate-50 transition-colors group cursor-pointer ${expandedRowId === inv.id ? 'bg-[#8EBF45]/5' : ''}`} onClick={() => toggleRow(inv.id)}>
+                                            <td className="p-4 text-slate-400">{expandedRowId === inv.id ? <ChevronUp size={16} className="text-[#8EBF45]" /> : <ChevronDown size={16} />}</td>
+                                            <td className="p-4 text-slate-500 whitespace-nowrap">{safeRender(inv.invoice_metadata?.invoice_date) || (inv.created_at ? new Date(inv.created_at).toLocaleDateString() : 'N/A')}</td>
+                                            <td className="p-4 font-bold text-[#0D0D0D]">{safeRender(inv.issuer_details?.name) || 'Unknown'}</td>
+                                            <td className="p-4 font-medium">{safeRender(inv.receiver_details?.name) || 'Unknown'}</td>
+                                            <td className="p-4 text-slate-500 font-mono font-bold">{safeRender(inv.invoice_metadata?.invoice_number) || '-'}</td>
+                                            <td className="p-4 text-right font-mono">{(inv.totals?.subtotal_taxable || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                            <td className="p-4 text-right font-black text-[#0D0D0D]">₹{(inv.totals?.grand_total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                                            <td className="p-4 text-center flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                {onEditInvoice && <button onClick={() => onEditInvoice(inv)} className="p-2 text-slate-400 hover:text-[#8EBF45] hover:bg-[#8EBF45]/5 rounded-lg transition-all" title="Edit"><PencilIcon className="w-4 h-4" /></button>}
+                                                <button onClick={() => setPrintInvoice(inv)} className="p-2 text-slate-400 hover:text-[#8EBF45] hover:bg-[#8EBF45]/5 rounded-lg transition-all" title="Download / Print"><Download size={16} /></button>
+                                                {inv.document_type === 'invoice' && <button onClick={() => openNoteModal(inv)} className="p-2 text-[#658C3E] hover:bg-blue-50 rounded-lg text-xs font-bold" title="Add Note"><Plus size={14} /></button>}
+                                                {inv.source_type === 'purchase' && <button onClick={() => handleImportToInventory(inv)} className="p-2 text-[#658C3E] hover:bg-[#8EBF45]/5 rounded-lg text-xs font-bold" title="Import to Stock"><ImportIcon /></button>}
+                                                <button onClick={() => handleDeleteInvoice(inv.id as string)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={16} /></button>
                                             </td>
                                         </tr>
-                                    )}
+                                        {expandedRowId === inv.id && (
+                                            <tr className="bg-slate-50 animate-fade-in">
+                                                <td colSpan={8} className="p-6 border-b border-[#A8BF75]/20">
+                                                    <div className="grid md:grid-cols-2 gap-8">
+                                                        <div>
+                                                            <h4 className="text-xs font-black text-[#658C3E] uppercase tracking-widest mb-4">Line Items</h4>
+                                                            <div className="space-y-2">
+                                                                {inv.items?.map((item, i) => (
+                                                                    <div key={i} className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                                                        <div className="flex-1">
+                                                                            <p className="text-sm font-bold text-[#0D0D0D]">{item.description}</p>
+                                                                            <p className="text-[10px] text-slate-400 uppercase font-black">HSN: {item.hsn_sac || 'N/A'} • Qty: {item.quantity}</p>
+                                                                        </div>
+                                                                        <div className="text-right ml-4">
+                                                                            <p className="text-sm font-black text-[#0D0D0D]">₹{item.total_value?.toLocaleString('en-IN')}</p>
+                                                                            <p className="text-[10px] text-[#658C3E] font-bold">@ {item.unit_price} / unit</p>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                                {(!inv.items || inv.items.length === 0) && <p className="text-xs text-slate-400 italic">No line items recorded.</p>}
+                                                            </div>
+                                                        </div>
+                                                        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                                                            <h4 className="text-xs font-black text-[#658C3E] uppercase tracking-widest mb-2">Invoice Summary</h4>
+                                                            <div className="space-y-2 text-sm">
+                                                                <div className="flex justify-between text-slate-500"><span>Taxable Subtotal</span><span className="font-mono">₹{inv.totals?.subtotal_taxable?.toLocaleString('en-IN')}</span></div>
+                                                                <div className="flex justify-between text-slate-500"><span>Total Tax (GST)</span><span className="font-mono">₹{((inv.totals?.cgst_total || 0) + (inv.totals?.sgst_total || 0) + (inv.totals?.igst_total || 0)).toLocaleString('en-IN')}</span></div>
+                                                                <div className="border-t pt-2 flex justify-between font-black text-[#0D0D0D] text-lg"><span>Grand Total</span><span className="text-[#8EBF45]">₹{inv.totals?.grand_total?.toLocaleString('en-IN')}</span></div>
+                                                            </div>
+                                                            <div className="mt-6 pt-4 border-t border-slate-100">
+                                                                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Additional Metadata</p>
+                                                                <div className="grid grid-cols-2 gap-y-2 text-xs">
+                                                                    <span className="text-slate-400">Uploaded By:</span> <span className="font-bold">{inv.uploaded_by || 'Unknown'}</span>
+                                                                    <span className="text-slate-400">Scan ID:</span> <span className="font-mono text-[10px] break-all">{inv.id}</span>
+                                                                    {inv.invoice_metadata?.ewaybill_number && <><span className="text-slate-400">E-Way Bill:</span> <span className="font-bold">{inv.invoice_metadata.ewaybill_number}</span></>}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
                                     </React.Fragment>
                                 ))
                             )}
@@ -554,6 +557,11 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
                     </table>
                 </div>
             </div>
+
+            {/* Invoice Print Preview Overlay */}
+            {printInvoice && (
+                <InvoicePrintView invoice={printInvoice} onClose={() => setPrintInvoice(null)} />
+            )}
         </div>
     );
 };
