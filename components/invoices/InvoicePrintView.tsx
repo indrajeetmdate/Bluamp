@@ -184,6 +184,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                             <tr className="border-b-2" style={{ borderColor: config.color }}>
                                                 <th className="py-1.5 pl-2 w-8 text-slate-500 font-semibold">#</th>
                                                 <th className="py-1.5 text-slate-500 font-semibold uppercase tracking-wider">Description</th>
+                                                <th className="py-1.5 text-left w-20 text-slate-500 font-semibold">HSN/SAC</th>
                                                 <th className="py-1.5 text-right w-14 text-slate-500 font-semibold">Qty</th>
                                                 <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Rate (₹)</th>
                                                 <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Discount (₹)</th>
@@ -198,6 +199,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                                     <tr key={globalIdx}>
                                                         <td className="py-1.5 pl-2 text-slate-400">{globalIdx + 1}</td>
                                                         <td className="py-1.5 font-medium text-slate-800">{safeRender(item.description)}</td>
+                                                        <td className="py-1.5 text-slate-600 text-xs">{item.hsn_sac || '—'}</td>
                                                         <td className="py-1.5 text-right">{item.quantity}</td>
                                                         <td className="py-1.5 text-right">{item.unit_price}</td>
                                                         <td className="py-1.5 text-right">{item.discount || 0}</td>
@@ -210,47 +212,57 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                     </table>
                                 </div>
 
-                                {/* TAX BREAKDOWN (Item-wise) */}
-                                {items.length > 0 && (
-                                    <div className="mb-3">
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Tax Breakdown {taxMode === 'intra' ? '(CGST + SGST)' : '(IGST)'}</p>
-                                        <table className="w-full text-xs border-collapse border border-slate-200">
-                                            <thead>
-                                                <tr className="bg-slate-50 border-b border-slate-200">
-                                                    <th className="py-1 px-2 text-left text-slate-500 font-semibold w-6">#</th>
-                                                    <th className="py-1 px-2 text-left text-slate-500 font-semibold">Item</th>
-                                                    <th className="py-1 px-2 text-left text-slate-500 font-semibold">HSN/SAC</th>
-                                                    <th className="py-1 px-2 text-right text-slate-500 font-semibold">Taxable</th>
-                                                    <th className="py-1 px-2 text-center text-slate-500 font-semibold">Rate%</th>
-                                                    {taxMode === 'intra' ? (<><th className="py-1 px-2 text-right text-slate-500 font-semibold">CGST</th><th className="py-1 px-2 text-right text-slate-500 font-semibold">SGST</th></>) : (<th className="py-1 px-2 text-right text-slate-500 font-semibold">IGST</th>)}
-                                                    <th className="py-1 px-2 text-right text-slate-500 font-bold">Tax</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-100">
-                                                {items.map((item, idx) => (
-                                                    <tr key={idx}>
-                                                        <td className="py-1 px-2 text-slate-400">{idx + 1}</td>
-                                                        <td className="py-1 px-2 text-slate-600 truncate max-w-[100px]">{safeRender(item.description)}</td>
-                                                        <td className="py-1 px-2 text-slate-600">{item.hsn_sac || '—'}</td>
-                                                        <td className="py-1 px-2 text-right">{(item.taxable_value || 0).toFixed(2)}</td>
-                                                        <td className="py-1 px-2 text-center">{item.igst_rate || 0}%</td>
-                                                        {taxMode === 'intra' ? (<><td className="py-1 px-2 text-right">{(item.cgst_amount || 0).toFixed(2)}</td><td className="py-1 px-2 text-right">{(item.sgst_amount || 0).toFixed(2)}</td></>) : (<td className="py-1 px-2 text-right">{(item.igst_amount || 0).toFixed(2)}</td>)}
-                                                        <td className="py-1 px-2 text-right font-semibold">{((item.cgst_amount || 0) + (item.sgst_amount || 0) + (item.igst_amount || 0)).toFixed(2)}</td>
+                                {/* TAX BREAKDOWN (Grouped) */}
+                                {items.length > 0 && (() => {
+                                    const taxGrps: { [k: string]: { hsn: string; taxableValue: number; rate: number; cgst: number; sgst: number; igst: number; totalTax: number } } = {};
+                                    items.forEach(item => {
+                                        const rate = Number(item.igst_rate || 0);
+                                        const key = `${rate}-${item.hsn_sac || ''}`;
+                                        if (!taxGrps[key]) taxGrps[key] = { hsn: item.hsn_sac || '-', taxableValue: 0, rate, cgst: 0, sgst: 0, igst: 0, totalTax: 0 };
+                                        taxGrps[key].taxableValue += item.taxable_value || 0;
+                                        taxGrps[key].cgst += item.cgst_amount || 0;
+                                        taxGrps[key].sgst += item.sgst_amount || 0;
+                                        taxGrps[key].igst += item.igst_amount || 0;
+                                        taxGrps[key].totalTax += (item.cgst_amount || 0) + (item.sgst_amount || 0) + (item.igst_amount || 0);
+                                    });
+                                    const grps = Object.values(taxGrps);
+                                    return (
+                                        <div className="mb-3">
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Tax Breakdown {taxMode === 'intra' ? '(CGST + SGST)' : '(IGST)'}</p>
+                                            <table className="w-full text-xs border-collapse border border-slate-200">
+                                                <thead>
+                                                    <tr className="bg-slate-50 border-b border-slate-200">
+                                                        <th className="py-1 px-2 text-left text-slate-500 font-semibold">HSN/SAC</th>
+                                                        <th className="py-1 px-2 text-right text-slate-500 font-semibold">Taxable</th>
+                                                        <th className="py-1 px-2 text-center text-slate-500 font-semibold">Rate%</th>
+                                                        {taxMode === 'intra' ? (<><th className="py-1 px-2 text-right text-slate-500 font-semibold">CGST</th><th className="py-1 px-2 text-right text-slate-500 font-semibold">SGST</th></>) : (<th className="py-1 px-2 text-right text-slate-500 font-semibold">IGST</th>)}
+                                                        <th className="py-1 px-2 text-right text-slate-500 font-bold">Tax</th>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                            <tfoot>
-                                                <tr className="border-t border-slate-300 font-bold text-xs">
-                                                    <td className="py-1 px-2" colSpan={3}>Total</td>
-                                                    <td className="py-1 px-2 text-right">{(doc.totals?.subtotal_taxable || 0).toFixed(2)}</td>
-                                                    <td className="py-1 px-2"></td>
-                                                    {taxMode === 'intra' ? (<><td className="py-1 px-2 text-right">{(doc.totals?.cgst_total || 0).toFixed(2)}</td><td className="py-1 px-2 text-right">{(doc.totals?.sgst_total || 0).toFixed(2)}</td></>) : (<td className="py-1 px-2 text-right">{(doc.totals?.igst_total || 0).toFixed(2)}</td>)}
-                                                    <td className="py-1 px-2 text-right" style={{ color: config.color }}>{((doc.totals?.cgst_total || 0) + (doc.totals?.sgst_total || 0) + (doc.totals?.igst_total || 0)).toFixed(2)}</td>
-                                                </tr>
-                                            </tfoot>
-                                        </table>
-                                    </div>
-                                )}
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {grps.map((g, i) => (
+                                                        <tr key={i}>
+                                                            <td className="py-1 px-2 text-slate-600">{g.hsn}</td>
+                                                            <td className="py-1 px-2 text-right">{g.taxableValue.toFixed(2)}</td>
+                                                            <td className="py-1 px-2 text-center">{g.rate}%</td>
+                                                            {taxMode === 'intra' ? (<><td className="py-1 px-2 text-right">{g.cgst.toFixed(2)}</td><td className="py-1 px-2 text-right">{g.sgst.toFixed(2)}</td></>) : (<td className="py-1 px-2 text-right">{g.igst.toFixed(2)}</td>)}
+                                                            <td className="py-1 px-2 text-right font-semibold">{g.totalTax.toFixed(2)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                                <tfoot>
+                                                    <tr className="border-t border-slate-300 font-bold text-xs">
+                                                        <td className="py-1 px-2">Total</td>
+                                                        <td className="py-1 px-2 text-right">{(doc.totals?.subtotal_taxable || 0).toFixed(2)}</td>
+                                                        <td className="py-1 px-2"></td>
+                                                        {taxMode === 'intra' ? (<><td className="py-1 px-2 text-right">{(doc.totals?.cgst_total || 0).toFixed(2)}</td><td className="py-1 px-2 text-right">{(doc.totals?.sgst_total || 0).toFixed(2)}</td></>) : (<td className="py-1 px-2 text-right">{(doc.totals?.igst_total || 0).toFixed(2)}</td>)}
+                                                        <td className="py-1 px-2 text-right" style={{ color: config.color }}>{((doc.totals?.cgst_total || 0) + (doc.totals?.sgst_total || 0) + (doc.totals?.igst_total || 0)).toFixed(2)}</td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* SUMMARY */}
                                 <div className="flex flex-col border-t pt-1 mt-1">
