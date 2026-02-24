@@ -49,6 +49,7 @@ export interface ReceivedGood {
   damagedCount: number;
   invoiceNumber: string;
   serials: string[];
+  serialIndexMap?: Record<string, number>; // Persistent # for each serial — survives production consumption
   timestamp: number;
   testReportLink?: string;
   gradingConfig?: {
