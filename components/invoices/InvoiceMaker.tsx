@@ -40,6 +40,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
 
     // Visibility States
     const [showSummarySection, setShowSummarySection] = useState(true);
+    const [showNoteSection, setShowNoteSection] = useState(false);
 
     // Editable labels for Billed To / Shipped To
     const [billedToLabel, setBilledToLabel] = useState('Billed To');
@@ -531,6 +532,62 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                     </div>
                 </div>
 
+                {/* Debit / Credit Note — minimizable */}
+                <div className="mb-4 border border-slate-200 rounded-lg overflow-hidden">
+                    <button
+                        onClick={() => setShowNoteSection(!showNoteSection)}
+                        className="w-full flex justify-between items-center px-3 py-2 bg-slate-50 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-600 uppercase tracking-wider"
+                    >
+                        <span>📋 Debit / Credit Note</span>
+                        {showNoteSection ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    {showNoteSection && (
+                        <div className="p-3 space-y-2 bg-white">
+                            <div>
+                                <label className="text-[10px] text-slate-400 uppercase font-bold">Type</label>
+                                <select
+                                    className="w-full text-sm p-1.5 border rounded bg-white outline-none focus:border-[#8EBF45]"
+                                    value={doc.invoice_metadata.note_type || ''}
+                                    onChange={e => setDoc(prev => ({ ...prev, invoice_metadata: { ...prev.invoice_metadata, note_type: e.target.value as any } }))}
+                                >
+                                    <option value="">None</option>
+                                    <option value="debit">Debit Note</option>
+                                    <option value="credit">Credit Note</option>
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-[10px] text-slate-400 uppercase font-bold">Against Invoice No.</label>
+                                    <input
+                                        className="w-full text-sm p-1.5 border rounded outline-none focus:border-[#8EBF45]"
+                                        placeholder="INV-001"
+                                        value={doc.invoice_metadata.related_invoice_number || ''}
+                                        onChange={e => setDoc(prev => ({ ...prev, invoice_metadata: { ...prev.invoice_metadata, related_invoice_number: e.target.value } }))}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-slate-400 uppercase font-bold">Dated</label>
+                                    <input
+                                        type="date"
+                                        className="w-full text-sm p-1.5 border rounded outline-none focus:border-[#8EBF45]"
+                                        value={doc.invoice_metadata.related_invoice_date || ''}
+                                        onChange={e => setDoc(prev => ({ ...prev, invoice_metadata: { ...prev.invoice_metadata, related_invoice_date: e.target.value } }))}
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] text-slate-400 uppercase font-bold">Reason</label>
+                                <input
+                                    className="w-full text-sm p-1.5 border rounded outline-none focus:border-[#8EBF45]"
+                                    placeholder="e.g. Rate difference, quality issue"
+                                    value={doc.invoice_metadata.note_reason || ''}
+                                    onChange={e => setDoc(prev => ({ ...prev, invoice_metadata: { ...prev.invoice_metadata, note_reason: e.target.value } }))}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 <div className="mb-6 p-3 bg-slate-50 rounded-lg border border-slate-200">
                     <div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-slate-500 uppercase">Load Template</span><SettingsIcon size={14} className="text-slate-400" /></div>
 
@@ -767,6 +824,24 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                         <span className="print-date-text text-sm" style={{ display: 'none' }}>{doc.invoice_metadata.invoice_date ? new Date(doc.invoice_metadata.invoice_date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</span>
                                     </div>
                                 </div>
+                                {/* Debit/Credit Note Reference */}
+                                {doc.invoice_metadata.note_type && (
+                                    <div className="mt-1.5 pt-1.5 border-t border-dashed border-slate-200 text-[10px] text-slate-500 space-y-0.5">
+                                        <div className="font-bold uppercase" style={{ color: config.color }}>
+                                            {doc.invoice_metadata.note_type === 'debit' ? 'Debit Note' : 'Credit Note'}
+                                        </div>
+                                        {doc.invoice_metadata.related_invoice_number && (
+                                            <div>Against Inv. No: <strong>{doc.invoice_metadata.related_invoice_number}</strong>
+                                                {doc.invoice_metadata.related_invoice_date && (
+                                                    <span> dt. {formatPrintDate(doc.invoice_metadata.related_invoice_date)}</span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {doc.invoice_metadata.note_reason && (
+                                            <div>Reason: {doc.invoice_metadata.note_reason}</div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 

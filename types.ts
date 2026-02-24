@@ -226,6 +226,8 @@ export interface ExtractedInvoice {
     ewaybill_number?: string;
     input_tax_credit?: 'set_off' | 'non_set_off' | 'not_applicable';
     related_invoice_number?: string;
+    related_invoice_date?: string;
+    note_type?: 'debit' | 'credit' | '';
     note_reason?: string;
     employee_name?: string;
     expense_category?: string;
