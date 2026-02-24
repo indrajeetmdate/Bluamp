@@ -747,6 +747,21 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                 />
                             </div>
                             <div className="flex flex-col">
+                                <label className="text-[10px] text-gray-500 font-bold uppercase mb-1">Notes</label>
+                                <input
+                                    type="text"
+                                    placeholder="actual physical qty = "
+                                    className="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-[#8EBF45] outline-none w-48 text-sm"
+                                    value={selectedBatch.notes ?? 'actual physical qty = '}
+                                    onChange={(e) => {
+                                        if (!setReceivedGoods) return;
+                                        const updated = { ...selectedBatch, notes: e.target.value };
+                                        setSelectedBatch(updated);
+                                        setReceivedGoods(prev => prev.map(g => g.id === selectedBatch.id ? updated : g));
+                                    }}
+                                />
+                            </div>
+                            <div className="flex flex-col">
                                 <label className="text-[10px] text-gray-500 font-bold uppercase mb-1">Search SN</label>
                                 <input
                                     type="text"

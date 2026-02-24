@@ -38,7 +38,7 @@ const statusInfo = {
 };
 
 const initialFormState: Omit<ReceivedGood, 'id' | 'timestamp' | 'serials'> & { serials: string[] } = {
-    name: '', category: '', makeModel: '', supplier: '', quantity: 0, status: ReceivedGoodStatus.ND, damagedCount: 0, invoiceNumber: '', serials: []
+    name: '', category: '', makeModel: '', supplier: '', quantity: 0, status: ReceivedGoodStatus.ND, damagedCount: 0, invoiceNumber: '', serials: [], notes: 'actual physical qty = '
 };
 
 const CATEGORIES = ['Cell', 'BMS', 'Bat-misc', 'Nickel Strip', 'Wire', 'Connector', 'Holder', 'Epoxy Sheet', 'Sleeve', 'Tape', 'Screw', 'Cabinet', 'Other'];
@@ -84,6 +84,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                 status: editingGood.status as ReceivedGoodStatus,
                 damagedCount: editingGood.damagedCount,
                 invoiceNumber: editingGood.invoiceNumber,
+                notes: editingGood.notes ?? 'actual physical qty = ',
                 serials: editingGood.serials,
             });
 
@@ -438,7 +439,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
 
     // CSV EXPORT: Export all inventory data with test results
     const handleExportCsv = () => {
-        const headers = ['Name', 'Category', 'Make/Model', 'Supplier', 'Invoice #', 'Quantity', 'Status', 'Date', 'Serial Number', '#', 'Voltage', 'Resistance (mΩ)', 'Capacity (Ah)', 'Grade', 'Location'];
+        const headers = ['Name', 'Category', 'Make/Model', 'Supplier', 'Invoice #', 'Quantity', 'Status', 'Date', 'Serial Number', '#', 'Voltage', 'Resistance (mΩ)', 'Capacity (Ah)', 'Grade', 'Location', 'Notes'];
         const rows: string[][] = [];
 
         receivedGoods.forEach(good => {
@@ -463,7 +464,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                         tr?.capacity?.toString() ?? '',
                         `"${tr?.grade || ''}"`,
                         `"${tr?.location || ''}"`
-                    ]);
+                    ].concat(idx === 0 ? [`"${good.notes || ''}"`] : ['']));
                 });
             } else {
                 rows.push([
@@ -475,7 +476,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                     String(good.quantity),
                     `"${good.status}"`,
                     new Date(good.timestamp).toLocaleDateString(),
-                    '', '', '', '', '', '', ''
+                    '', '', '', '', '', '', '', ''
                 ]);
             }
         });
@@ -646,6 +647,18 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                                 ))}
                             </select>
                         </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div className="mt-4">
+                        <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Notes</label>
+                        <textarea
+                            value={formData.notes ?? 'actual physical qty = '}
+                            onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm resize-none"
+                            rows={2}
+                            placeholder="actual physical qty = "
+                        />
                     </div>
 
                     {/* Serial Number & Test Data Management - ONLY FOR CELLS */}

@@ -52,6 +52,7 @@ export interface ReceivedGood {
   serialIndexMap?: Record<string, number>; // Persistent # for each serial — survives production consumption
   timestamp: number;
   testReportLink?: string;
+  notes?: string; // Stock verification notes, default: "actual physical qty = "
   gradingConfig?: {
     lowerLimit: number;
     upperLimit: number;
