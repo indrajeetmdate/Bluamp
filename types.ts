@@ -21,6 +21,7 @@ export type View =
 export interface PriceListItem {
   id: string;
   model_name: string;
+  hsn_code: string;
   price_without_gst: number;
 }
 

@@ -11,12 +11,14 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
     const [isUploading, setIsUploading] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
+    const [editHsn, setEditHsn] = useState('');
     const [editPrice, setEditPrice] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const fileRef = useRef<HTMLInputElement>(null);
 
     // New row state
     const [newName, setNewName] = useState('');
+    const [newHsn, setNewHsn] = useState('');
     const [newPrice, setNewPrice] = useState('');
 
     const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,6 +40,7 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
                 // Parse header to find column indices
                 const header = lines[0].split(',').map(h => h.trim().toLowerCase());
                 const nameIdx = header.findIndex(h => h.includes('model') || h.includes('name') || h.includes('description') || h.includes('item'));
+                const hsnIdx = header.findIndex(h => h.includes('hsn') || h.includes('sac') || h.includes('code'));
                 const priceIdx = header.findIndex(h => h.includes('price') || h.includes('rate') || h.includes('amount'));
 
                 if (nameIdx === -1 || priceIdx === -1) {
@@ -50,9 +53,10 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
                 for (let i = 1; i < lines.length; i++) {
                     const cols = lines[i].split(',').map(c => c.trim());
                     const name = cols[nameIdx];
+                    const hsn = hsnIdx !== -1 ? (cols[hsnIdx] || '') : '';
                     const price = parseFloat(cols[priceIdx]);
                     if (name && !isNaN(price)) {
-                        parsed.push({ model_name: name, price_without_gst: price });
+                        parsed.push({ model_name: name, hsn_code: hsn, price_without_gst: price });
                     }
                 }
 
@@ -63,9 +67,7 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
                 }
 
                 // Replace entire price list in Supabase
-                // 1. Delete all existing
                 await supabase.from('price_list').delete().neq('id', '');
-                // 2. Insert new
                 const { data, error } = await supabase.from('price_list').insert(parsed).select();
                 if (error) {
                     alert('Failed to save price list: ' + error.message);
@@ -85,10 +87,11 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
     const handleAddRow = async () => {
         if (!newName.trim()) return;
         const price = parseFloat(newPrice) || 0;
-        const { data, error } = await supabase.from('price_list').insert([{ model_name: newName.trim(), price_without_gst: price }]).select();
+        const { data, error } = await supabase.from('price_list').insert([{ model_name: newName.trim(), hsn_code: newHsn.trim(), price_without_gst: price }]).select();
         if (data && !error) {
             setPriceList(prev => [...prev, ...(data as PriceListItem[])]);
             setNewName('');
+            setNewHsn('');
             setNewPrice('');
         }
     };
@@ -101,21 +104,22 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
     const handleStartEdit = (item: PriceListItem) => {
         setEditingId(item.id);
         setEditName(item.model_name);
+        setEditHsn(item.hsn_code || '');
         setEditPrice(String(item.price_without_gst));
     };
 
     const handleSaveEdit = async () => {
         if (!editingId) return;
         const price = parseFloat(editPrice) || 0;
-        await supabase.from('price_list').update({ model_name: editName.trim(), price_without_gst: price }).eq('id', editingId);
-        setPriceList(prev => prev.map(p => p.id === editingId ? { ...p, model_name: editName.trim(), price_without_gst: price } : p));
+        await supabase.from('price_list').update({ model_name: editName.trim(), hsn_code: editHsn.trim(), price_without_gst: price }).eq('id', editingId);
+        setPriceList(prev => prev.map(p => p.id === editingId ? { ...p, model_name: editName.trim(), hsn_code: editHsn.trim(), price_without_gst: price } : p));
         setEditingId(null);
     };
 
-    const filtered = priceList.filter(p => p.model_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    const filtered = priceList.filter(p => p.model_name.toLowerCase().includes(searchTerm.toLowerCase()) || (p.hsn_code || '').toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+        <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
@@ -132,7 +136,7 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
                 <div className="flex items-center gap-4">
                     <div className="flex-1">
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Upload CSV Price List</label>
-                        <p className="text-[10px] text-slate-400 mb-3">CSV must have columns: <strong>Model Name</strong> and <strong>Price without GST</strong>. Uploading replaces the entire list.</p>
+                        <p className="text-[10px] text-slate-400 mb-3">CSV columns: <strong>Model Name</strong>, <strong>HSN Code</strong>, <strong>Price without GST</strong>. Uploading replaces the entire list.</p>
                         <input
                             ref={fileRef}
                             type="file"
@@ -155,17 +159,24 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
             <div className="flex gap-3">
                 <input
                     type="text"
-                    placeholder="Search models..."
+                    placeholder="Search models or HSN..."
                     className="flex-1 p-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#8EBF45] shadow-sm"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                 />
                 <input
                     type="text"
-                    placeholder="New model name"
-                    className="w-48 p-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#8EBF45]"
+                    placeholder="Model name"
+                    className="w-40 p-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#8EBF45]"
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
+                />
+                <input
+                    type="text"
+                    placeholder="HSN code"
+                    className="w-28 p-2.5 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#8EBF45]"
+                    value={newHsn}
+                    onChange={e => setNewHsn(e.target.value)}
                 />
                 <input
                     type="number"
@@ -190,6 +201,7 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
                         <tr>
                             <th className="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-8">#</th>
                             <th className="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Model Name</th>
+                            <th className="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider w-32">HSN Code</th>
                             <th className="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-40">Price (excl. GST)</th>
                             <th className="p-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-right w-32">Actions</th>
                         </tr>
@@ -206,6 +218,13 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
                                                 value={editName}
                                                 onChange={e => setEditName(e.target.value)}
                                                 autoFocus
+                                            />
+                                        </td>
+                                        <td className="p-3">
+                                            <input
+                                                className="w-full text-sm p-1.5 border rounded outline-none focus:border-[#8EBF45]"
+                                                value={editHsn}
+                                                onChange={e => setEditHsn(e.target.value)}
                                             />
                                         </td>
                                         <td className="p-3 text-right">
@@ -226,6 +245,7 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
                                 ) : (
                                     <>
                                         <td className="p-3 text-sm font-medium text-slate-800">{item.model_name}</td>
+                                        <td className="p-3 text-sm font-mono text-slate-600">{item.hsn_code || '—'}</td>
                                         <td className="p-3 text-sm font-mono text-right text-slate-700">₹{item.price_without_gst.toLocaleString('en-IN')}</td>
                                         <td className="p-3 text-right">
                                             <div className="flex justify-end gap-1">
@@ -239,7 +259,7 @@ const PriceList: React.FC<PriceListProps> = ({ priceList, setPriceList }) => {
                         ))}
                         {filtered.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="p-8 text-center text-slate-400 italic text-sm">
+                                <td colSpan={5} className="p-8 text-center text-slate-400 italic text-sm">
                                     {priceList.length === 0 ? 'No prices uploaded yet. Upload a CSV to get started.' : 'No matching models found.'}
                                 </td>
                             </tr>

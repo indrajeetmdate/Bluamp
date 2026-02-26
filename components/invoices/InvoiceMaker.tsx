@@ -89,9 +89,28 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
     };
 
     const handlePriceSelect = (idx: number, item: PriceListItem) => {
-        updateItem(idx, 'description', item.model_name);
-        // Use setTimeout so the description update is processed first
-        setTimeout(() => updateItem(idx, 'unit_price', item.price_without_gst), 0);
+        const newItems = [...doc.items];
+        newItems[idx] = { ...newItems[idx], description: item.model_name, hsn_sac: item.hsn_code || '', unit_price: item.price_without_gst };
+        // Recalculate taxable_value
+        newItems[idx].taxable_value = Math.max(0, (Number(newItems[idx].quantity) * Number(newItems[idx].unit_price)) - Number(newItems[idx].discount || 0));
+        // Recalculate taxes
+        const taxRate = Number(newItems[idx].igst_rate || 0);
+        const taxMode = getTaxMode(doc.issuer_details.gstin, doc.receiver_details.gstin, doc.invoice_metadata.tax_mode);
+        if (taxMode === 'intra') {
+            const halfRate = taxRate / 2;
+            newItems[idx].cgst_rate = halfRate;
+            newItems[idx].cgst_amount = newItems[idx].taxable_value * (halfRate / 100);
+            newItems[idx].sgst_rate = halfRate;
+            newItems[idx].sgst_amount = newItems[idx].taxable_value * (halfRate / 100);
+            newItems[idx].igst_amount = 0;
+        } else {
+            newItems[idx].igst_amount = newItems[idx].taxable_value * (taxRate / 100);
+            newItems[idx].cgst_rate = 0; newItems[idx].cgst_amount = 0;
+            newItems[idx].sgst_rate = 0; newItems[idx].sgst_amount = 0;
+        }
+        newItems[idx].total_value = newItems[idx].taxable_value + (newItems[idx].cgst_amount || 0) + (newItems[idx].sgst_amount || 0) + (newItems[idx].igst_amount || 0);
+        const newTotals = recalculateInvoiceTotals(newItems);
+        setDoc(prev => ({ ...prev, items: newItems, totals: newTotals }));
         setPriceDropdownIdx(null);
         setPriceSuggestions([]);
     };
@@ -953,7 +972,10 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                                                 className="w-full text-left px-3 py-2 hover:bg-[#8EBF45]/10 flex justify-between items-center text-sm border-b border-slate-50 last:border-0 transition-colors"
                                                             >
                                                                 <span className="font-medium text-slate-800 truncate mr-2">{p.model_name}</span>
-                                                                <span className="text-xs font-mono text-slate-500 whitespace-nowrap">₹{p.price_without_gst.toLocaleString('en-IN')}</span>
+                                                                <span className="flex items-center gap-2">
+                                                                    {p.hsn_code && <span className="text-[10px] text-slate-400 font-mono">HSN: {p.hsn_code}</span>}
+                                                                    <span className="text-xs font-mono text-slate-500 whitespace-nowrap">₹{p.price_without_gst.toLocaleString('en-IN')}</span>
+                                                                </span>
                                                             </button>
                                                         ))}
                                                     </div>
