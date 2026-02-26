@@ -1,15 +1,17 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
-import { ExtractedInvoice, InvoiceTemplate, EMPTY_INVOICE, InvoiceItem, CompanyProfile, BankDetails } from '../../types';
+import { ExtractedInvoice, InvoiceTemplate, EMPTY_INVOICE, InvoiceItem, CompanyProfile, BankDetails, PriceListItem } from '../../types';
 import { recalculateInvoiceTotals, safeRender, amountToWords, getTaxMode } from '../../utils/invoiceUtils';
 import { Save, Printer, Plus, Trash2, SettingsIcon, Columns, Wallet, Download, RefreshCw, ChevronUp, ChevronDown, Loader2, LayoutDashboard } from './Icons';
 import { ImportIcon } from '../icons/ImportIcon';
 
 interface InvoiceMakerProps {
     currentUser: { username: string } | null;
+    username?: string;
     companyProfiles?: CompanyProfile[];
     initialData?: ExtractedInvoice | null;
+    priceList?: PriceListItem[];
 }
 
 // Extend config locally to support new UI flags without breaking shared types immediately
@@ -17,7 +19,7 @@ type ExtendedConfig = InvoiceTemplate['config'] & {
     showReceiverSign?: boolean;
 };
 
-const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfiles = [], initialData }) => {
+const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfiles = [], initialData, priceList = [] }) => {
     const [docType, setDocType] = useState<'invoice' | 'po' | 'quotation'>('invoice');
     const [customTitle, setCustomTitle] = useState('INVOICE');
     const [doc, setDoc] = useState<ExtractedInvoice>({ ...EMPTY_INVOICE, source_type: 'sales', document_type: 'generated_invoice' });
@@ -63,6 +65,36 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
     const [templateName, setTemplateName] = useState('');
     const [selectedTemplateId, setSelectedTemplateId] = useState('');
     const [amountInWordsStr, setAmountInWordsStr] = useState('');
+
+    // Smart Pricing autocomplete state
+    const [priceDropdownIdx, setPriceDropdownIdx] = useState<number | null>(null);
+    const [priceSuggestions, setPriceSuggestions] = useState<PriceListItem[]>([]);
+
+    const handleDescriptionChange = (idx: number, value: string) => {
+        updateItem(idx, 'description', value);
+        if (value.length >= 2 && priceList.length > 0) {
+            const lower = value.toLowerCase();
+            const matches = priceList.filter(p => p.model_name.toLowerCase().includes(lower)).slice(0, 6);
+            if (matches.length > 0) {
+                setPriceDropdownIdx(idx);
+                setPriceSuggestions(matches);
+            } else {
+                setPriceDropdownIdx(null);
+                setPriceSuggestions([]);
+            }
+        } else {
+            setPriceDropdownIdx(null);
+            setPriceSuggestions([]);
+        }
+    };
+
+    const handlePriceSelect = (idx: number, item: PriceListItem) => {
+        updateItem(idx, 'description', item.model_name);
+        // Use setTimeout so the description update is processed first
+        setTimeout(() => updateItem(idx, 'unit_price', item.price_without_gst), 0);
+        setPriceDropdownIdx(null);
+        setPriceSuggestions([]);
+    };
 
     const itemFileInputRef = useRef<HTMLInputElement>(null);
     // Refs to clear file inputs
@@ -910,7 +942,23 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                     {(doc.items || []).map((item, idx) => (
                                         <tr key={idx} className="group">
                                             {visibleColumns.index && <td className="py-2 pl-2 text-slate-400">{idx + 1}</td>}
-                                            {visibleColumns.description && <td className="py-2"><input className="w-full bg-transparent outline-none font-medium text-slate-800" value={safeRender(item.description)} onChange={e => updateItem(idx, 'description', e.target.value)} /></td>}
+                                            {visibleColumns.description && <td className="py-2 relative">
+                                                <input className="w-full bg-transparent outline-none font-medium text-slate-800" value={safeRender(item.description)} onChange={e => handleDescriptionChange(idx, e.target.value)} onBlur={() => setTimeout(() => { setPriceDropdownIdx(null); setPriceSuggestions([]); }, 150)} onFocus={() => { if (safeRender(item.description).length >= 2 && priceList.length > 0) handleDescriptionChange(idx, safeRender(item.description)); }} />
+                                                {priceDropdownIdx === idx && priceSuggestions.length > 0 && (
+                                                    <div className="absolute left-0 top-full z-50 w-80 bg-white border border-slate-200 rounded-lg shadow-xl mt-1 max-h-48 overflow-y-auto no-print" style={{ animation: 'fadeIn 0.1s ease-out' }}>
+                                                        {priceSuggestions.map(p => (
+                                                            <button
+                                                                key={p.id}
+                                                                onMouseDown={(e) => { e.preventDefault(); handlePriceSelect(idx, p); }}
+                                                                className="w-full text-left px-3 py-2 hover:bg-[#8EBF45]/10 flex justify-between items-center text-sm border-b border-slate-50 last:border-0 transition-colors"
+                                                            >
+                                                                <span className="font-medium text-slate-800 truncate mr-2">{p.model_name}</span>
+                                                                <span className="text-xs font-mono text-slate-500 whitespace-nowrap">₹{p.price_without_gst.toLocaleString('en-IN')}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </td>}
                                             {visibleColumns.hsn && <td className="py-2"><input className="w-full bg-transparent outline-none text-slate-600 text-xs" value={item.hsn_sac || ''} onChange={e => updateItem(idx, 'hsn_sac', e.target.value)} placeholder="—" /></td>}
                                             {visibleColumns.quantity && <td className="py-2 text-right"><input className="w-full bg-transparent outline-none text-right" value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} /></td>}
                                             {visibleColumns.rate && <td className="py-2 text-right"><input className="w-full bg-transparent outline-none text-right" value={item.unit_price} onChange={e => updateItem(idx, 'unit_price', e.target.value)} /></td>}

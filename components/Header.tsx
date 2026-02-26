@@ -26,8 +26,8 @@ const TopNavButton: React.FC<NavButtonProps> = ({ isActive, onClick, children, i
   <button
     onClick={onClick}
     className={`flex items-center px-4 py-3 text-sm font-semibold transition-all duration-200 border-b-4 focus:outline-none ${isActive
-        ? 'border-[#8EBF45] text-[#8EBF45] bg-white/5'
-        : 'border-transparent text-slate-400 hover:text-white hover:border-white/20'
+      ? 'border-[#8EBF45] text-[#8EBF45] bg-white/5'
+      : 'border-transparent text-slate-400 hover:text-white hover:border-white/20'
       }`}
   >
     {icon && <span className={`mr-2 transition-colors duration-200 ${isActive ? 'text-[#8EBF45]' : 'text-slate-500'}`}>{icon}</span>}
@@ -39,8 +39,8 @@ const SubNavButton: React.FC<NavButtonProps> = ({ isActive, onClick, children, i
   <button
     onClick={onClick}
     className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap border focus:outline-none flex items-center gap-2 ${isActive
-        ? 'bg-[#8EBF45] text-[#0D0D0D] border-[#8EBF45] shadow-lg scale-105'
-        : 'bg-white text-[#404040] border-[#A8BF75]/30 hover:border-[#8EBF45] hover:text-[#658C3E]'
+      ? 'bg-[#8EBF45] text-[#0D0D0D] border-[#8EBF45] shadow-lg scale-105'
+      : 'bg-white text-[#404040] border-[#A8BF75]/30 hover:border-[#8EBF45] hover:text-[#658C3E]'
       }`}
   >
     {icon}
@@ -67,7 +67,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
 
   const categories = useMemo(() => ({
     operations: ['received', 'testing', 'wip', 'finished', 'storage'] as View[],
-    finance: ['finance_upload', 'finance_dashboard', 'finance_gst', 'finance_expenses', 'finance_maker'] as View[],
+    finance: ['finance_upload', 'finance_dashboard', 'finance_gst', 'finance_expenses', 'finance_prices', 'finance_maker'] as View[],
     analytics: ['ai_assistant', 'reports', 'master', 'log'] as View[],
     admin: ['companies', 'users'] as View[],
   }), []);
@@ -148,6 +148,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
                 <SubNavButton isActive={currentView === 'finance_maker'} onClick={() => setView('finance_maker')}>Invoice Maker</SubNavButton>
                 <SubNavButton isActive={currentView === 'finance_gst'} onClick={() => setView('finance_gst')}>GST Returns</SubNavButton>
                 <SubNavButton isActive={currentView === 'finance_expenses'} onClick={() => setView('finance_expenses')}>Expenses</SubNavButton>
+                <SubNavButton isActive={currentView === 'finance_prices'} onClick={() => setView('finance_prices')}>Prices</SubNavButton>
               </>
             )}
             {currentCategory === 'analytics' && (

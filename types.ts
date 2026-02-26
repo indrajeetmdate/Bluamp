@@ -15,7 +15,14 @@ export type View =
   | 'finance_upload'
   | 'finance_gst'
   | 'finance_expenses'
+  | 'finance_prices'
   | 'finance_maker';
+
+export interface PriceListItem {
+  id: string;
+  model_name: string;
+  price_without_gst: number;
+}
 
 export interface User {
   username: string;
