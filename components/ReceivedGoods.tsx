@@ -63,6 +63,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
     const [formData, setFormData] = useState(initialFormState);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
+    const [filterNotes, setFilterNotes] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [serialEntries, setSerialEntries] = useState<SerialGridRow[]>([]);
@@ -191,7 +192,9 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
 
         const matchesCategory = selectedCategory === 'All' || good.category === selectedCategory;
 
-        return matchesSearch && matchesCategory;
+        const matchesNotes = !filterNotes || (good.notes && good.notes !== 'actual physical qty = ');
+
+        return matchesSearch && matchesCategory && matchesNotes;
     }).sort((a, b) => b.timestamp - a.timestamp);
 
     const handleEditClick = (good: ReceivedGood) => {
@@ -544,6 +547,13 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                         {cat}
                     </button>
                 ))}
+                <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                <button
+                    onClick={() => setFilterNotes(!filterNotes)}
+                    className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all flex items-center gap-1.5 ${filterNotes ? 'bg-amber-400 text-amber-900 border-amber-400 shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                >
+                    📝 Has Notes
+                </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -561,8 +571,8 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setOpenNoteId(openNoteId === good.id ? null : good.id); }}
                                         className={`relative p-1 rounded-md transition-all text-sm ${(good.notes && good.notes !== 'actual physical qty = ')
-                                                ? 'text-amber-500 hover:bg-amber-50'
-                                                : 'text-slate-300 hover:text-amber-400 hover:bg-amber-50'
+                                            ? 'text-amber-500 hover:bg-amber-50'
+                                            : 'text-slate-300 hover:text-amber-400 hover:bg-amber-50'
                                             }`}
                                         title="Open note"
                                     >
