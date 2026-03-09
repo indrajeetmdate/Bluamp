@@ -283,7 +283,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
 
         // Only capture serials if category is Cell
         const validSerials = isCell
-            ? serialEntries.map(e => e.serial).filter(s => s.trim() !== '')
+            ? serialEntries.map(e => e.serial.trim()).filter(s => s !== '')
             : [];
 
         // Build persistent serialIndexMap: preserve existing indices, assign new ones for new serials

@@ -218,7 +218,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
 
     // Helper to get result
     const getResult = (serial: string): Partial<TestResult> => {
-        return testResults.find(r => r.receivedGoodId === selectedBatch?.id && r.serialNumber === serial) || {};
+        return testResults.find(r => r.receivedGoodId === selectedBatch?.id && (r.serialNumber || '').trim() === serial.trim()) || {};
     };
 
     // --- Sorting Logic ---
@@ -663,13 +663,13 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {eligibleGoods.map(good => {
-                            const serialsSet = new Set(good.serials);
+                            const serialsSet = new Set(good.serials.map(s => s.trim()));
                             const totalSerials = good.serials.length;
 
                             const testedCount = new Set(
                                 testResults
-                                    .filter(r => r.receivedGoodId === good.id && serialsSet.has(r.serialNumber))
-                                    .map(r => r.serialNumber)
+                                    .filter(r => r.receivedGoodId === good.id && serialsSet.has((r.serialNumber || '').trim()))
+                                    .map(r => (r.serialNumber || '').trim())
                             ).size;
 
                             const progress = totalSerials > 0 ? Math.round((testedCount / totalSerials) * 100) : 0;
@@ -751,8 +751,8 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                 <button
                                     onClick={() => setShowBatchNote(!showBatchNote)}
                                     className={`p-2 rounded-md transition-all text-lg ${(selectedBatch.notes && selectedBatch.notes !== 'actual physical qty = ')
-                                            ? 'text-amber-500 hover:bg-amber-50'
-                                            : 'text-slate-300 hover:text-amber-400 hover:bg-amber-50'
+                                        ? 'text-amber-500 hover:bg-amber-50'
+                                        : 'text-slate-300 hover:text-amber-400 hover:bg-amber-50'
                                         }`}
                                     title="Open note"
                                 >
