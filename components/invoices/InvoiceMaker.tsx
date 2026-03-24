@@ -4,6 +4,7 @@ import { supabase } from '../../supabaseClient';
 import { ExtractedInvoice, InvoiceTemplate, EMPTY_INVOICE, InvoiceItem, CompanyProfile, BankDetails, PriceListItem } from '../../types';
 import { recalculateInvoiceTotals, safeRender, amountToWords, getTaxMode } from '../../utils/invoiceUtils';
 import { Save, Printer, Plus, Trash2, SettingsIcon, Columns, Wallet, Download, RefreshCw, ChevronUp, ChevronDown, Loader2, LayoutDashboard } from './Icons';
+import { QRCodeSVG } from 'qrcode.react';
 import { ImportIcon } from '../icons/ImportIcon';
 
 interface InvoiceMakerProps {
@@ -752,6 +753,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                 <input className="w-full text-xs p-2 border rounded" placeholder="Account No" value={doc.issuer_details.bank_details?.account_number || ''} onChange={e => updateBankDetails('account_number', e.target.value)} />
                                 <input className="w-full text-xs p-2 border rounded" placeholder="IFSC Code" value={doc.issuer_details.bank_details?.ifsc || ''} onChange={e => updateBankDetails('ifsc', e.target.value)} />
                                 <input className="w-full text-xs p-2 border rounded" placeholder="Branch" value={doc.issuer_details.bank_details?.branch || ''} onChange={e => updateBankDetails('branch', e.target.value)} />
+                                <input className="w-full text-xs p-2 border rounded col-span-2" placeholder="UPI ID (for QR payment)" value={doc.issuer_details.bank_details?.upi_id || ''} onChange={e => updateBankDetails('upi_id', e.target.value)} />
                             </div>
                         </div>
                     </div>
@@ -1100,13 +1102,25 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
 
                                 <div className="flex gap-8 mt-4 pt-2 border-t border-slate-100">
                                     {doc.issuer_details.bank_details?.account_number && (
-                                        <div className="flex-1">
-                                            <h4 className="font-bold text-[10px] text-slate-500 uppercase mb-1">Bank Details</h4>
-                                            <div className="text-[10px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
-                                                <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
-                                                {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
-                                                <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
-                                                <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
+                                        <div className="flex-1 flex gap-4">
+                                            {doc.issuer_details.bank_details?.upi_id && (
+                                                <div className="flex-shrink-0 bg-white p-1 border rounded shadow-sm self-start">
+                                                    <QRCodeSVG 
+                                                        value={`upi://pay?pa=${doc.issuer_details.bank_details.upi_id}&pn=${encodeURIComponent(doc.issuer_details.name || '')}&am=${doc.totals.grand_total}&cu=INR`}
+                                                        size={64}
+                                                        level="M"
+                                                    />
+                                                    <p className="text-[8px] text-center font-bold text-slate-400 mt-1 uppercase">Scan to Pay</p>
+                                                </div>
+                                            )}
+                                            <div className="flex-1">
+                                                <h4 className="font-bold text-[10px] text-slate-500 uppercase mb-1">Bank Details</h4>
+                                                <div className="text-[10px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
+                                                    <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
+                                                    {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
+                                                    <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
+                                                    <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -1304,13 +1318,25 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                             </div>
                                             <div className="flex gap-6 mt-2 pt-1 border-t border-slate-100">
                                                 {doc.issuer_details.bank_details?.account_number && (
-                                                    <div className="flex-1">
-                                                        <h4 className="font-bold text-[9px] text-slate-500 uppercase mb-0.5">Bank Details</h4>
-                                                        <div className="text-[9px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
-                                                            <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
-                                                            {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
-                                                            <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
-                                                            <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
+                                                    <div className="flex-[2] flex gap-3">
+                                                        {doc.issuer_details.bank_details?.upi_id && (
+                                                            <div className="flex-shrink-0 bg-white p-1 border rounded shadow-sm self-start">
+                                                                <QRCodeSVG 
+                                                                    value={`upi://pay?pa=${doc.issuer_details.bank_details.upi_id}&pn=${encodeURIComponent(doc.issuer_details.name || '')}&am=${doc.totals.grand_total}&cu=INR`}
+                                                                    size={55}
+                                                                    level="M"
+                                                                />
+                                                                <p className="text-[7px] text-center font-bold text-slate-400 mt-0.5 uppercase">Scan to Pay</p>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex-1">
+                                                            <h4 className="font-bold text-[9px] text-slate-500 uppercase mb-0.5">Bank Details</h4>
+                                                            <div className="text-[9px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
+                                                                <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
+                                                                {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
+                                                                <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
+                                                                <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 )}

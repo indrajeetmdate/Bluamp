@@ -182,6 +182,7 @@ export interface BankDetails {
   bank_name?: string;
   branch?: string;
   ifsc?: string;
+  upi_id?: string;
 }
 
 export interface InvoiceParty {
