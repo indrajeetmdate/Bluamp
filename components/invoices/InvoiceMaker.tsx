@@ -1109,7 +1109,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                 </div>
 
                                 <div className="flex gap-8 mt-4 pt-2 border-t border-slate-100">
-                                    {doc.issuer_details.bank_details?.account_number && (
+                                    {(doc.issuer_details.bank_details?.account_number || doc.issuer_details.bank_details?.upi_id) && (
                                         <div className="flex-1 flex gap-4">
                                             {doc.issuer_details.bank_details?.upi_id && (
                                                 <div className="flex-shrink-0 bg-white p-1 border rounded shadow-sm self-start">
@@ -1121,15 +1121,17 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                                     <p className="text-[8px] text-center font-bold text-slate-400 mt-1 uppercase">Scan to Pay</p>
                                                 </div>
                                             )}
-                                            <div className="flex-1">
-                                                <h4 className="font-bold text-[10px] text-slate-500 uppercase mb-1">Bank Details</h4>
-                                                <div className="text-[10px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
-                                                    <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
-                                                    {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
-                                                    <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
-                                                    <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
+                                            {doc.issuer_details.bank_details?.account_number && (
+                                                <div className="flex-1">
+                                                    <h4 className="font-bold text-[10px] text-slate-500 uppercase mb-1">Bank Details</h4>
+                                                    <div className="text-[10px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
+                                                        <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
+                                                        {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
+                                                        <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
+                                                        <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
                                     )}
                                     <div className="flex-1">
@@ -1325,7 +1327,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                                 </div>
                                             </div>
                                             <div className="flex gap-6 mt-2 pt-1 border-t border-slate-100">
-                                                {doc.issuer_details.bank_details?.account_number && (
+                                                {(doc.issuer_details.bank_details?.account_number || doc.issuer_details.bank_details?.upi_id) && (
                                                     <div className="flex-[2] flex gap-3">
                                                         {doc.issuer_details.bank_details?.upi_id && (
                                                             <div className="flex-shrink-0 bg-white p-1 border rounded shadow-sm self-start">
@@ -1337,15 +1339,17 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                                                 <p className="text-[7px] text-center font-bold text-slate-400 mt-0.5 uppercase">Scan to Pay</p>
                                                             </div>
                                                         )}
-                                                        <div className="flex-1">
-                                                            <h4 className="font-bold text-[9px] text-slate-500 uppercase mb-0.5">Bank Details</h4>
-                                                            <div className="text-[9px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
-                                                                <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
-                                                                {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
-                                                                <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
-                                                                <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
+                                                        {doc.issuer_details.bank_details?.account_number && (
+                                                            <div className="flex-1">
+                                                                <h4 className="font-bold text-[9px] text-slate-500 uppercase mb-0.5">Bank Details</h4>
+                                                                <div className="text-[9px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
+                                                                    <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
+                                                                    {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
+                                                                    <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
+                                                                    <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
+                                                                </div>
                                                             </div>
-                                                        </div>
+                                                        )}
                                                     </div>
                                                 )}
                                                 <div className="flex-1">
