@@ -209,7 +209,16 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
         setStamp(loadedConfig.stampUrl || null);
         setSignature(loadedConfig.signatureUrl || null);
         if (loadedConfig.issuer_details) {
-            setDoc(prev => ({ ...prev, issuer_details: loadedConfig.issuer_details! }));
+            setDoc(prev => {
+                const updatedIssuer = { ...loadedConfig.issuer_details! };
+                // Ensure UPI ID is preserved if missing from template, or set to default if entirely empty
+                if (!updatedIssuer.bank_details) {
+                    updatedIssuer.bank_details = { upi_id: '8956340980@ibl' };
+                } else if (!updatedIssuer.bank_details.upi_id) {
+                    updatedIssuer.bank_details.upi_id = '8956340980@ibl';
+                }
+                return { ...prev, issuer_details: updatedIssuer };
+            });
         }
     };
 
@@ -1109,31 +1118,29 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                 </div>
 
                                 <div className="flex gap-8 mt-4 pt-2 border-t border-slate-100">
-                                    {(doc.issuer_details.bank_details?.account_number || doc.issuer_details.bank_details?.upi_id) && (
-                                        <div className="flex-1 flex gap-4">
-                                            {doc.issuer_details.bank_details?.upi_id && (
-                                                <div className="flex-shrink-0 bg-white p-1 border rounded shadow-sm self-start">
-                                                    <QRCodeSVG 
-                                                        value={`upi://pay?pa=${doc.issuer_details.bank_details.upi_id}&pn=${encodeURIComponent(doc.issuer_details.name || '')}&am=${doc.totals.grand_total}&cu=INR`}
-                                                        size={64}
-                                                        level="M"
-                                                    />
-                                                    <p className="text-[8px] text-center font-bold text-slate-400 mt-1 uppercase">Scan to Pay</p>
+                                    <div className="flex-[2] flex gap-5">
+                                        {doc.issuer_details.bank_details?.upi_id && (
+                                            <div className="flex-shrink-0 bg-white p-1 border rounded shadow-sm self-start">
+                                                <QRCodeSVG 
+                                                    value={`upi://pay?pa=${doc.issuer_details.bank_details.upi_id}&pn=${encodeURIComponent(doc.issuer_details.name || '')}&am=${doc.totals.grand_total}&cu=INR`}
+                                                    size={64}
+                                                    level="M"
+                                                />
+                                                <p className="text-[8px] text-center font-bold text-slate-400 mt-1 uppercase">Scan to Pay</p>
+                                            </div>
+                                        )}
+                                        {doc.issuer_details.bank_details?.account_number && (
+                                            <div className="flex-1">
+                                                <h4 className="font-bold text-[10px] text-slate-500 uppercase mb-1">Bank Details</h4>
+                                                <div className="text-[10px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
+                                                    <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
+                                                    {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
+                                                    <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
+                                                    <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
                                                 </div>
-                                            )}
-                                            {doc.issuer_details.bank_details?.account_number && (
-                                                <div className="flex-1">
-                                                    <h4 className="font-bold text-[10px] text-slate-500 uppercase mb-1">Bank Details</h4>
-                                                    <div className="text-[10px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
-                                                        <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
-                                                        {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
-                                                        <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
-                                                        <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className="flex-1">
                                         <h4 className="font-bold text-[10px] text-slate-500 uppercase mb-1">Terms</h4>
                                         <textarea className="w-full text-[10px] text-slate-600 whitespace-pre-line bg-transparent border-none focus:ring-0 outline-none resize-none overflow-hidden p-0" rows={3} value={config.terms} onChange={(e) => setConfig({ ...config, terms: e.target.value })} />
@@ -1327,31 +1334,29 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                                 </div>
                                             </div>
                                             <div className="flex gap-6 mt-2 pt-1 border-t border-slate-100">
-                                                {(doc.issuer_details.bank_details?.account_number || doc.issuer_details.bank_details?.upi_id) && (
-                                                    <div className="flex-[2] flex gap-3">
-                                                        {doc.issuer_details.bank_details?.upi_id && (
-                                                            <div className="flex-shrink-0 bg-white p-1 border rounded shadow-sm self-start">
-                                                                <QRCodeSVG 
-                                                                    value={`upi://pay?pa=${doc.issuer_details.bank_details.upi_id}&pn=${encodeURIComponent(doc.issuer_details.name || '')}&am=${doc.totals.grand_total}&cu=INR`}
-                                                                    size={55}
-                                                                    level="M"
-                                                                />
-                                                                <p className="text-[7px] text-center font-bold text-slate-400 mt-0.5 uppercase">Scan to Pay</p>
+                                                <div className="flex-[2] flex gap-4">
+                                                    {doc.issuer_details.bank_details?.upi_id && (
+                                                        <div className="flex-shrink-0 bg-white p-1 border rounded shadow-sm self-start">
+                                                            <QRCodeSVG 
+                                                                value={`upi://pay?pa=${doc.issuer_details.bank_details.upi_id}&pn=${encodeURIComponent(doc.issuer_details.name || '')}&am=${doc.totals.grand_total}&cu=INR`}
+                                                                size={55}
+                                                                level="M"
+                                                            />
+                                                            <p className="text-[7px] text-center font-bold text-slate-400 mt-0.5 uppercase">Scan to Pay</p>
+                                                        </div>
+                                                    )}
+                                                    {doc.issuer_details.bank_details?.account_number && (
+                                                        <div className="flex-1">
+                                                            <h4 className="font-bold text-[9px] text-slate-500 uppercase mb-0.5">Bank Details</h4>
+                                                            <div className="text-[9px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
+                                                                <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
+                                                                {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
+                                                                <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
+                                                                <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
                                                             </div>
-                                                        )}
-                                                        {doc.issuer_details.bank_details?.account_number && (
-                                                            <div className="flex-1">
-                                                                <h4 className="font-bold text-[9px] text-slate-500 uppercase mb-0.5">Bank Details</h4>
-                                                                <div className="text-[9px] text-slate-600 grid grid-cols-[auto_1fr] gap-x-2">
-                                                                    <span>Bank:</span><span className="font-medium">{doc.issuer_details.bank_details.bank_name}</span>
-                                                                    {doc.issuer_details.bank_details.account_name && <><span>Name:</span><span className="font-medium">{doc.issuer_details.bank_details.account_name}</span></>}
-                                                                    <span>A/c:</span><span className="font-medium">{doc.issuer_details.bank_details.account_number}</span>
-                                                                    <span>IFSC:</span><span className="font-medium">{doc.issuer_details.bank_details.ifsc}</span>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <div className="flex-1">
                                                     <h4 className="font-bold text-[9px] text-slate-500 uppercase mb-0.5">Terms</h4>
                                                     <p className="text-[9px] text-slate-600 whitespace-pre-line">{config.terms}</p>
