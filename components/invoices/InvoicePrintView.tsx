@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { ExtractedInvoice, InvoiceItem, InvoiceTemplate } from '../../types';
 import { getTaxMode, safeRender, amountToWords } from '../../utils/invoiceUtils';
@@ -23,33 +24,56 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
         footerText: 'This is a system generated invoice.',
         terms: '1. Payment due within 30 days.',
         logoSize: 64,
-        showReceiverSign: true
+        showReceiverSign: true,
+        showQRCode: true,
+        showTotalsTable: true,
+        showTaxTable: true
     });
     const printRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Load template for branding (logo, stamp, signature)
-        const loadTemplate = async () => {
-            const { data } = await supabase.from('invoice_templates').select('*').limit(1);
-            if (data && data.length > 0) {
-                const tmpl = data[0] as InvoiceTemplate;
-                const c = tmpl.config as any;
-                setLogo(c.logoUrl || null);
-                setStamp(c.stampUrl || null);
-                setSignature(c.signatureUrl || null);
-                setConfig(prev => ({
-                    ...prev,
-                    font: c.font || prev.font,
-                    color: c.color || prev.color,
-                    footerText: c.footerText || prev.footerText,
-                    terms: c.terms || prev.terms,
-                    logoSize: c.logoSize || prev.logoSize,
-                    showReceiverSign: c.showReceiverSign ?? prev.showReceiverSign
-                }));
-            }
-        };
-        loadTemplate();
-    }, []);
+        // First try to load from invoice metadata ui_config
+        if (invoice.invoice_metadata?.ui_config) {
+            const ui = invoice.invoice_metadata.ui_config as any;
+            setLogo(ui.logoUrl || null);
+            setStamp(ui.stampUrl || null);
+            setSignature(ui.signatureUrl || null);
+            setConfig(prev => ({
+                ...prev,
+                ...ui,
+                logoSize: ui.logoSize || 64,
+                showReceiverSign: ui.showReceiverSign ?? true,
+                showQRCode: ui.showQRCode ?? true,
+                showTotalsTable: ui.showTotalsTable ?? true,
+                showTaxTable: ui.showTaxTable ?? true
+            }));
+        } else {
+            // Load template for branding fallback
+            const loadTemplate = async () => {
+                const { data } = await supabase.from('invoice_templates').select('*').limit(1);
+                if (data && data.length > 0) {
+                    const tmpl = data[0] as InvoiceTemplate;
+                    const c = tmpl.config as any;
+                    setLogo(c.logoUrl || null);
+                    setStamp(c.stampUrl || null);
+                    setSignature(c.signatureUrl || null);
+                    setConfig(prev => ({
+                        ...prev,
+                        font: c.font || prev.font,
+                        color: c.color || prev.color,
+                        footerText: c.footerText || prev.footerText,
+                        terms: c.terms || prev.terms,
+                        logoSize: c.logoSize || prev.logoSize,
+                        showReceiverSign: c.showReceiverSign ?? true,
+                        showQRCode: c.showQRCode ?? true,
+                        showTotalsTable: c.showTotalsTable ?? true,
+                        showTaxTable: c.showTaxTable ?? true
+                    }));
+                }
+            };
+            loadTemplate();
+        }
+    }, [invoice]);
 
     const doc = invoice;
     const docType = doc.document_type || 'invoice';
@@ -80,14 +104,14 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
         window.print();
     };
 
-    return (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex flex-col">
+    const overlayContent = (
+        <div id="invoice-print-overlay" className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex flex-col h-full">
             <style>{`
                 @media print {
-                    body > * { display: none !important; }
-                    #invoice-print-overlay { display: block !important; }
+                    body > *:not(#invoice-print-overlay) { display: none !important; }
+                    #invoice-print-overlay { position: static !important; height: auto !important; width: 100% !important; display: block !important; background: transparent !important; }
                     #invoice-print-overlay > .print-toolbar { display: none !important; }
-                    #invoice-print-overlay > .print-scroll-area { overflow: visible !important; background: white !important; }
+                    #invoice-print-overlay > .print-scroll-area { overflow: visible !important; background: white !important; padding: 0 !important; }
                     @page { size: A4; margin: 0; }
                     .invoice-print-page {
                         page-break-after: always;
@@ -106,8 +130,6 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                     .invoice-print-page:last-child { page-break-after: auto; }
                 }
             `}</style>
-
-            <div id="invoice-print-overlay" className="flex flex-col h-full">
                 {/* Toolbar */}
                 <div className="print-toolbar bg-white border-b px-6 py-3 flex items-center justify-between flex-shrink-0">
                     <div>
@@ -214,7 +236,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                 </div>
 
                                 {/* TAX BREAKDOWN (Grouped) */}
-                                {items.length > 0 && (() => {
+                                {(config.showTaxTable ?? true) && items.length > 0 && (() => {
                                     const taxGrps: { [k: string]: { hsn: string; taxableValue: number; rate: number; cgst: number; sgst: number; igst: number; totalTax: number } } = {};
                                     items.forEach(item => {
                                         const rate = Number(item.igst_rate || 0);
@@ -273,15 +295,19 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                             <p className="text-[10px] font-bold text-slate-700">{amountInWordsStr}</p>
                                         </div>
                                         <div className="w-44">
-                                            <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Subtotal</span><span>{(doc.totals?.subtotal_taxable || 0).toFixed(2)}</span></div>
-                                            <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Tax</span><span>{((doc.totals?.cgst_total || 0) + (doc.totals?.sgst_total || 0) + (doc.totals?.igst_total || 0)).toFixed(2)}</span></div>
-                                            <div className="flex justify-between text-sm font-bold border-t border-slate-300 pt-1 mt-1" style={{ color: config.color }}><span>Total</span><span>₹ {(doc.totals?.grand_total || 0).toFixed(2)}</span></div>
+                                            {(config.showTotalsTable ?? true) && (
+                                                <>
+                                                    <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Subtotal</span><span>{(doc.totals?.subtotal_taxable || 0).toFixed(2)}</span></div>
+                                                    <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Tax</span><span>{((doc.totals?.cgst_total || 0) + (doc.totals?.sgst_total || 0) + (doc.totals?.igst_total || 0)).toFixed(2)}</span></div>
+                                                    <div className="flex justify-between text-sm font-bold border-t border-slate-300 pt-1 mt-1" style={{ color: config.color }}><span>Total</span><span>₹ {(doc.totals?.grand_total || 0).toFixed(2)}</span></div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex gap-6 mt-2 pt-1 border-t border-slate-100">
                                         {(doc.issuer_details?.bank_details?.account_number || doc.issuer_details?.bank_details?.upi_id) && (
                                             <div className="flex-[2] flex gap-3">
-                                                {doc.issuer_details?.bank_details?.upi_id && (
+                                                {(config.showQRCode ?? true) && doc.issuer_details?.bank_details?.upi_id && (
                                                     <div className="flex-shrink-0 bg-white p-1 border rounded shadow-sm self-start">
                                                         <QRCodeSVG 
                                                             value={`upi://pay?pa=${doc.issuer_details.bank_details.upi_id}&pn=${encodeURIComponent(doc.issuer_details.name || '')}&am=${doc.totals?.grand_total || 0}&cu=INR`}
@@ -339,9 +365,11 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                         ))}
                     </div>
                 </div>
-            </div>
         </div>
     );
+
+    if (typeof window === 'undefined') return null;
+    return createPortal(overlayContent, document.body);
 };
 
 export default InvoicePrintView;
