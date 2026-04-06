@@ -21,6 +21,18 @@ type ExtendedConfig = InvoiceTemplate['config'] & {
     showQRCode?: boolean;
     showTotalsTable?: boolean;
     showTaxTable?: boolean;
+    visibleColumns?: {
+        index: boolean;
+        description: boolean;
+        hsn: boolean;
+        quantity: boolean;
+        rate: boolean;
+        discount: boolean;
+        taxableValue: boolean;
+        total: boolean;
+    };
+    billedToLabel?: string;
+    shippedToLabel?: string;
 };
 
 const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfiles = [], initialData, priceList = [] }) => {
@@ -164,6 +176,9 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                     showTotalsTable: loadedConfig.showTotalsTable ?? true,
                     showTaxTable: loadedConfig.showTaxTable ?? true
                 }));
+                if (loadedConfig.visibleColumns) setVisibleColumns(loadedConfig.visibleColumns);
+                if (loadedConfig.billedToLabel) setBilledToLabel(loadedConfig.billedToLabel);
+                if (loadedConfig.shippedToLabel) setShippedToLabel(loadedConfig.shippedToLabel);
                 // Load images if present
                 setLogo(loadedConfig.logoUrl || null);
                 setStamp(loadedConfig.stampUrl || null);
@@ -490,7 +505,10 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                         ...config,
                         logoUrl: logo || undefined,
                         stampUrl: stamp || undefined,
-                        signatureUrl: signature || undefined
+                        signatureUrl: signature || undefined,
+                        visibleColumns,
+                        billedToLabel,
+                        shippedToLabel
                     }
                 },
                 filename: invNum,

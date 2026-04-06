@@ -27,7 +27,19 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
         showReceiverSign: true,
         showQRCode: true,
         showTotalsTable: true,
-        showTaxTable: true
+        showTaxTable: true,
+        billedToLabel: 'Billed To',
+        shippedToLabel: 'Shipped To',
+        visibleColumns: {
+            index: true,
+            description: true,
+            hsn: true,
+            quantity: true,
+            rate: true,
+            discount: true,
+            taxableValue: true,
+            total: true
+        }
     });
     const printRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +57,10 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                 showReceiverSign: ui.showReceiverSign ?? true,
                 showQRCode: ui.showQRCode ?? true,
                 showTotalsTable: ui.showTotalsTable ?? true,
-                showTaxTable: ui.showTaxTable ?? true
+                showTaxTable: ui.showTaxTable ?? true,
+                billedToLabel: ui.billedToLabel || prev.billedToLabel,
+                shippedToLabel: ui.shippedToLabel || prev.shippedToLabel,
+                visibleColumns: ui.visibleColumns || prev.visibleColumns
             }));
         } else {
             // Load template for branding fallback
@@ -179,7 +194,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                 {/* RECEIVER (Billed + Shipped) */}
                                 <div className="mb-3 flex gap-6">
                                     <div className="flex-1">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{docType === 'quotation' ? 'Quotation For' : docType === 'generated_po' ? 'Vendor' : 'Billed To'}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{config.billedToLabel || (docType === 'quotation' ? 'Quotation For' : docType === 'generated_po' ? 'Vendor' : 'Billed To')}</p>
                                         <h3 className="font-bold text-sm text-slate-900 leading-tight">{safeRender(doc.receiver_details?.name) || 'Client Name'}</h3>
                                         <p className="text-xs text-slate-600 whitespace-pre-line mb-1 leading-tight">{safeRender(doc.receiver_details?.address)}</p>
                                         <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
@@ -190,7 +205,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                         </div>
                                     </div>
                                     <div className="flex-1">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Shipped To</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{config.shippedToLabel || 'Shipped To'}</p>
                                         <h3 className="font-bold text-sm text-slate-900 leading-tight">{safeRender(doc.shipped_to_details?.name) || safeRender(doc.receiver_details?.name) || 'Client Name'}</h3>
                                         <p className="text-xs text-slate-600 whitespace-pre-line mb-1 leading-tight">{safeRender(doc.shipped_to_details?.address) || safeRender(doc.receiver_details?.address)}</p>
                                         <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
@@ -205,14 +220,14 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                     <table className="w-full text-left text-sm border-collapse">
                                         <thead>
                                             <tr className="border-b-2" style={{ borderColor: config.color }}>
-                                                <th className="py-1.5 pl-2 w-8 text-slate-500 font-semibold">#</th>
-                                                <th className="py-1.5 text-slate-500 font-semibold uppercase tracking-wider">Description</th>
-                                                <th className="py-1.5 text-left w-20 text-slate-500 font-semibold">HSN/SAC</th>
-                                                <th className="py-1.5 text-right w-14 text-slate-500 font-semibold">Qty</th>
-                                                <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Rate (₹)</th>
-                                                <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Discount (₹)</th>
-                                                <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Taxable</th>
-                                                <th className="py-1.5 text-right w-28 text-slate-900 font-bold pr-2">Total (₹)</th>
+                                                {config.visibleColumns.index && <th className="py-1.5 pl-2 w-8 text-slate-500 font-semibold">#</th>}
+                                                {config.visibleColumns.description && <th className="py-1.5 text-slate-500 font-semibold uppercase tracking-wider">Description</th>}
+                                                {config.visibleColumns.hsn && <th className="py-1.5 text-left w-20 text-slate-500 font-semibold">HSN/SAC</th>}
+                                                {config.visibleColumns.quantity && <th className="py-1.5 text-right w-14 text-slate-500 font-semibold">Qty</th>}
+                                                {config.visibleColumns.rate && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Rate (₹)</th>}
+                                                {config.visibleColumns.discount && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Discount (₹)</th>}
+                                                {config.visibleColumns.taxableValue && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Taxable</th>}
+                                                {config.visibleColumns.total && <th className="py-1.5 text-right w-28 text-slate-900 font-bold pr-2">Total (₹)</th>}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
@@ -220,14 +235,14 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                                 const globalIdx = pageIdx * ITEMS_PER_PAGE + idx;
                                                 return (
                                                     <tr key={globalIdx}>
-                                                        <td className="py-1.5 pl-2 text-slate-400">{globalIdx + 1}</td>
-                                                        <td className="py-1.5 font-medium text-slate-800">{safeRender(item.description)}</td>
-                                                        <td className="py-1.5 text-slate-600 text-xs">{item.hsn_sac || '—'}</td>
-                                                        <td className="py-1.5 text-right">{item.quantity}</td>
-                                                        <td className="py-1.5 text-right">{item.unit_price}</td>
-                                                        <td className="py-1.5 text-right">{item.discount || 0}</td>
-                                                        <td className="py-1.5 text-right text-slate-600">{(item.taxable_value || 0).toFixed(2)}</td>
-                                                        <td className="py-1.5 text-right font-semibold pr-2">{(item.total_value || 0).toFixed(2)}</td>
+                                                        {config.visibleColumns.index && <td className="py-1.5 pl-2 text-slate-400">{globalIdx + 1}</td>}
+                                                        {config.visibleColumns.description && <td className="py-1.5 font-medium text-slate-800">{safeRender(item.description)}</td>}
+                                                        {config.visibleColumns.hsn && <td className="py-1.5 text-slate-600 text-xs">{item.hsn_sac || '—'}</td>}
+                                                        {config.visibleColumns.quantity && <td className="py-1.5 text-right">{item.quantity}</td>}
+                                                        {config.visibleColumns.rate && <td className="py-1.5 text-right">{item.unit_price}</td>}
+                                                        {config.visibleColumns.discount && <td className="py-1.5 text-right">{item.discount || 0}</td>}
+                                                        {config.visibleColumns.taxableValue && <td className="py-1.5 text-right text-slate-600">{(item.taxable_value || 0).toFixed(2)}</td>}
+                                                        {config.visibleColumns.total && <td className="py-1.5 text-right font-semibold pr-2">{(item.total_value || 0).toFixed(2)}</td>}
                                                     </tr>
                                                 );
                                             })}
@@ -289,21 +304,19 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
 
                                 {/* SUMMARY */}
                                 <div className="flex flex-col border-t pt-1 mt-1">
-                                    <div className="flex justify-between items-start gap-4">
-                                        <div className="flex-1">
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase">Amount in Words</p>
-                                            <p className="text-[10px] font-bold text-slate-700">{amountInWordsStr}</p>
+                                    {(config.showTotalsTable ?? true) && (
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div className="flex-1">
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase">Amount in Words</p>
+                                                <p className="text-[10px] font-bold text-slate-700">{amountInWordsStr}</p>
+                                            </div>
+                                            <div className="w-44">
+                                                <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Subtotal</span><span>{(doc.totals?.subtotal_taxable || 0).toFixed(2)}</span></div>
+                                                <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Tax</span><span>{((doc.totals?.cgst_total || 0) + (doc.totals?.sgst_total || 0) + (doc.totals?.igst_total || 0)).toFixed(2)}</span></div>
+                                                <div className="flex justify-between text-sm font-bold border-t border-slate-300 pt-1 mt-1" style={{ color: config.color }}><span>Total</span><span>₹ {(doc.totals?.grand_total || 0).toFixed(2)}</span></div>
+                                            </div>
                                         </div>
-                                        <div className="w-44">
-                                            {(config.showTotalsTable ?? true) && (
-                                                <>
-                                                    <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Subtotal</span><span>{(doc.totals?.subtotal_taxable || 0).toFixed(2)}</span></div>
-                                                    <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Tax</span><span>{((doc.totals?.cgst_total || 0) + (doc.totals?.sgst_total || 0) + (doc.totals?.igst_total || 0)).toFixed(2)}</span></div>
-                                                    <div className="flex justify-between text-sm font-bold border-t border-slate-300 pt-1 mt-1" style={{ color: config.color }}><span>Total</span><span>₹ {(doc.totals?.grand_total || 0).toFixed(2)}</span></div>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
+                                    )}
                                     <div className="flex gap-6 mt-2 pt-1 border-t border-slate-100">
                                         {(doc.issuer_details?.bank_details?.account_number || doc.issuer_details?.bank_details?.upi_id) && (
                                             <div className="flex-[2] flex gap-3">
