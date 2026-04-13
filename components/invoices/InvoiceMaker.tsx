@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabaseClient';
 import { ExtractedInvoice, InvoiceTemplate, EMPTY_INVOICE, InvoiceItem, CompanyProfile, BankDetails, PriceListItem } from '../../types';
-import { recalculateInvoiceTotals, safeRender, amountToWords, getTaxMode } from '../../utils/invoiceUtils';
+import { recalculateInvoiceTotals, safeRender, amountToWords, getTaxMode, getCurrencySymbol } from '../../utils/invoiceUtils';
 import { Save, Printer, Plus, Trash2, SettingsIcon, Columns, Wallet, Download, RefreshCw, ChevronUp, ChevronDown, Loader2, LayoutDashboard } from './Icons';
 import { QRCodeSVG } from 'qrcode.react';
 import { ImportIcon } from '../icons/ImportIcon';
@@ -68,6 +68,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
     const [isSaving, setIsSaving] = useState(false);
 
     // Visibility States
+    const currencySymbol = getCurrencySymbol(doc.totals?.currency);
     const [showNoteSection, setShowNoteSection] = useState(false);
 
     // Editable labels for Billed To / Shipped To
@@ -1109,10 +1110,10 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                         {visibleColumns.description && <th className="py-2 text-slate-500 font-semibold uppercase tracking-wider">Description</th>}
                                         {visibleColumns.hsn && <th className="py-2 text-left w-24 text-slate-500 font-semibold">HSN/SAC</th>}
                                         {visibleColumns.quantity && <th className="py-2 text-right w-14 text-slate-500 font-semibold">Qty</th>}
-                                        {visibleColumns.rate && <th className="py-2 text-right w-24 text-slate-500 font-semibold">Rate (₹)</th>}
-                                        {visibleColumns.discount && <th className="py-2 text-right w-24 text-slate-500 font-semibold">Discount (₹)</th>}
+                                        {visibleColumns.rate && <th className="py-2 text-right w-24 text-slate-500 font-semibold">Rate ({currencySymbol})</th>}
+                                        {visibleColumns.discount && <th className="py-2 text-right w-24 text-slate-500 font-semibold">Discount ({currencySymbol})</th>}
                                         {visibleColumns.taxableValue && <th className="py-2 text-right w-24 text-slate-500 font-semibold">Taxable</th>}
-                                        {visibleColumns.total && <th className="py-2 text-right w-28 text-slate-900 font-bold pr-2">Total (₹)</th>}
+                                        {visibleColumns.total && <th className="py-2 text-right w-28 text-slate-900 font-bold pr-2">Total ({currencySymbol})</th>}
                                         <th className="py-2 w-20 no-print"></th>
                                     </tr>
                                 </thead>
@@ -1133,7 +1134,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                                                 <span className="font-medium text-slate-800 truncate mr-2">{p.model_name}</span>
                                                                 <span className="flex items-center gap-2">
                                                                     {p.hsn_code && <span className="text-[10px] text-slate-400 font-mono">HSN: {p.hsn_code}</span>}
-                                                                    <span className="text-xs font-mono text-slate-500 whitespace-nowrap">₹{p.price_without_gst.toLocaleString('en-IN')}</span>
+                                                                    <span className="text-xs font-mono text-slate-500 whitespace-nowrap">{currencySymbol}{p.price_without_gst.toLocaleString('en-IN')}</span>
                                                                 </span>
                                                             </button>
                                                         ))}
@@ -1252,7 +1253,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                         <div className="w-48">
                                             <div className="flex justify-between text-xs text-slate-600 mb-0.5"><span>Subtotal</span><span>{(doc.totals.subtotal_taxable || 0).toFixed(2)}</span></div>
                                             <div className="flex justify-between text-xs text-slate-600 mb-0.5"><span>Tax</span><span>{((doc.totals.cgst_total || 0) + (doc.totals.sgst_total || 0) + (doc.totals.igst_total || 0)).toFixed(2)}</span></div>
-                                            <div className="flex justify-between text-base font-bold border-t border-slate-300 pt-1 mt-1" style={{ color: config.color }}><span>Total</span><span>₹ {(doc.totals.grand_total || 0).toFixed(2)}</span></div>
+                                            <div className="flex justify-between text-base font-bold border-t border-slate-300 pt-1 mt-1" style={{ color: config.color }}><span>Total</span><span>{currencySymbol} {(doc.totals.grand_total || 0).toFixed(2)}</span></div>
                                         </div>
                                     </div>
                                 )}
@@ -1380,10 +1381,10 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                                     {visibleColumns.description && <th className="py-1.5 text-slate-500 font-semibold uppercase tracking-wider">Description</th>}
                                                     {visibleColumns.hsn && <th className="py-1.5 text-left w-20 text-slate-500 font-semibold">HSN/SAC</th>}
                                                     {visibleColumns.quantity && <th className="py-1.5 text-right w-14 text-slate-500 font-semibold">Qty</th>}
-                                                    {visibleColumns.rate && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Rate (₹)</th>}
-                                                    {visibleColumns.discount && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Discount (₹)</th>}
+                                                    {visibleColumns.rate && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Rate ({currencySymbol})</th>}
+                                                    {visibleColumns.discount && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Discount ({currencySymbol})</th>}
                                                     {visibleColumns.taxableValue && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Taxable</th>}
-                                                    {visibleColumns.total && <th className="py-1.5 text-right w-28 text-slate-900 font-bold pr-2">Total (₹)</th>}
+                                                    {visibleColumns.total && <th className="py-1.5 text-right w-28 text-slate-900 font-bold pr-2">Total ({currencySymbol})</th>}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-100">
@@ -1469,7 +1470,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                                     <div className="w-44">
                                                         <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Subtotal</span><span>{(doc.totals.subtotal_taxable || 0).toFixed(2)}</span></div>
                                                         <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Tax</span><span>{((doc.totals.cgst_total || 0) + (doc.totals.sgst_total || 0) + (doc.totals.igst_total || 0)).toFixed(2)}</span></div>
-                                                        <div className="flex justify-between text-sm font-bold border-t border-slate-300 pt-1 mt-1" style={{ color: config.color }}><span>Total</span><span>₹ {(doc.totals.grand_total || 0).toFixed(2)}</span></div>
+                                                        <div className="flex justify-between text-sm font-bold border-t border-slate-300 pt-1 mt-1" style={{ color: config.color }}><span>Total</span><span>{currencySymbol} {(doc.totals.grand_total || 0).toFixed(2)}</span></div>
                                                     </div>
                                                 </div>
                                             )}
