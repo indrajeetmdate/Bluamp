@@ -151,66 +151,87 @@ const CompanyProfiles: React.FC<CompanyProfilesProps> = ({ companyProfiles, setC
         p.contactPerson.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    if (isIframe) {
+        return (
+            <div className="p-4 bg-white min-h-screen">
+                <form onSubmit={handleSubmit} className="space-y-4 max-w-3xl mx-auto">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                        <input type="text" name="name" value={formData.name} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">GST Number</label>
+                        <input type="text" name="gstNumber" value={formData.gstNumber} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" name="email" value={formData.email} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
+                    </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Contact Person</label>
+                            <input type="text" name="contactPerson" value={formData.contactPerson} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+                            <input type="text" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Shipping Address</label>
+                        <textarea name="shippingAddress" value={formData.shippingAddress} onChange={handleInputChange} rows={3} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></textarea>
+                    </div>
+                    <div className="flex justify-end pt-4">
+                        <button type="submit" className="bg-[#8EBF45] text-[#0D0D0D] px-6 py-2.5 rounded-lg hover:bg-[#658C3E] hover:text-white font-bold uppercase tracking-wide text-sm shadow-md transition-colors">Save Profile</button>
+                    </div>
+                </form>
+            </div>
+        );
+    }
+
     return (
         <div>
-            {!isIframe && (
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-800">Company Profiles</h1>
-                        <p className="text-xs text-gray-500 mt-1">
-                            <span className="font-semibold">CSV Columns (in order):</span> Company Name, GST Number, Email, Contact Person, Phone Number, Shipping Address
-                        </p>
-                    </div>
-                    <div className="flex space-x-2">
-                        <button 
-                            onClick={handleImportClick}
-                            className="flex items-center bg-white border-2 border-[#A8BF75] text-[#658C3E] px-4 py-2 rounded-lg shadow-md hover:bg-[#A8BF75]/10 transition-colors font-bold uppercase tracking-wide text-xs"
-                        >
-                            <ImportIcon />
-                            <span className="ml-2">Import CSV</span>
-                        </button>
-                        <button 
-                            onClick={handleOpenAdd}
-                            className="flex items-center bg-[#8EBF45] text-[#0D0D0D] px-4 py-2 rounded-lg shadow-md hover:bg-[#658C3E] hover:text-white transition-colors font-bold uppercase tracking-wide text-xs"
-                        >
-                            <PlusIcon />
-                            <span className="ml-2">Add Company</span>
-                        </button>
-                    </div>
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={handleFileChange} 
-                        className="hidden" 
-                        accept=".csv,text/csv"
-                    />
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800">Company Profiles</h1>
+                    <p className="text-xs text-gray-500 mt-1">
+                        <span className="font-semibold">CSV Columns (in order):</span> Company Name, GST Number, Email, Contact Person, Phone Number, Shipping Address
+                    </p>
                 </div>
-            )}
-
-            {isIframe && (
-                <div className="mb-4 flex justify-between items-center border-b pb-4">
-                    <h2 className="text-lg font-bold text-slate-800">Add New Company</h2>
+                <div className="flex space-x-2">
+                    <button 
+                        onClick={handleImportClick}
+                        className="flex items-center bg-white border-2 border-[#A8BF75] text-[#658C3E] px-4 py-2 rounded-lg shadow-md hover:bg-[#A8BF75]/10 transition-colors font-bold uppercase tracking-wide text-xs"
+                    >
+                        <ImportIcon />
+                        <span className="ml-2">Import CSV</span>
+                    </button>
                     <button 
                         onClick={handleOpenAdd}
                         className="flex items-center bg-[#8EBF45] text-[#0D0D0D] px-4 py-2 rounded-lg shadow-md hover:bg-[#658C3E] hover:text-white transition-colors font-bold uppercase tracking-wide text-xs"
                     >
                         <PlusIcon />
-                        <span className="ml-2">Create New Profile</span>
+                        <span className="ml-2">Add Company</span>
                     </button>
                 </div>
-            )}
+                <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleFileChange} 
+                    className="hidden" 
+                    accept=".csv,text/csv"
+                />
+            </div>
 
-            {!isIframe && (
-                <div className="mb-6">
-                    <input 
-                        type="text" 
-                        placeholder="Search companies..." 
-                        className="block w-full p-3 pl-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45] transition-shadow"
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            )}
+            <div className="mb-6">
+                <input 
+                    type="text" 
+                    placeholder="Search companies..." 
+                    className="block w-full p-3 pl-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45] transition-shadow"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProfiles.map(profile => (
