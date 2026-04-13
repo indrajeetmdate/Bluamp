@@ -11,6 +11,7 @@ interface CompanyProfilesProps {
   companyProfiles: CompanyProfile[];
   setCompanyProfiles: React.Dispatch<React.SetStateAction<CompanyProfile[]>>;
   addLogEntry: (action: string, details: string) => void;
+  isIframe?: boolean;
 }
 
 const initialFormState: Omit<CompanyProfile, 'id'> = {
@@ -22,7 +23,7 @@ const initialFormState: Omit<CompanyProfile, 'id'> = {
     phoneNumber: ''
 };
 
-const CompanyProfiles: React.FC<CompanyProfilesProps> = ({ companyProfiles, setCompanyProfiles, addLogEntry }) => {
+const CompanyProfiles: React.FC<CompanyProfilesProps> = ({ companyProfiles, setCompanyProfiles, addLogEntry, isIframe }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formData, setFormData] = useState(initialFormState);
@@ -72,6 +73,11 @@ const CompanyProfiles: React.FC<CompanyProfilesProps> = ({ companyProfiles, setC
             };
             setCompanyProfiles(prev => [...prev, newProfile]);
             addLogEntry('Added Company', `Added new company profile: ${formData.name}`);
+            
+            // Notify parent if in iframe
+            if (isIframe) {
+                window.parent.postMessage({ type: 'COMPANY_ADDED', company: newProfile }, '*');
+            }
         }
         setIsModalOpen(false);
     };
@@ -147,47 +153,64 @@ const CompanyProfiles: React.FC<CompanyProfilesProps> = ({ companyProfiles, setC
 
     return (
         <div>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Company Profiles</h1>
-                    <p className="text-xs text-gray-500 mt-1">
-                        <span className="font-semibold">CSV Columns (in order):</span> Company Name, GST Number, Email, Contact Person, Phone Number, Shipping Address
-                    </p>
+            {!isIframe && (
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-800">Company Profiles</h1>
+                        <p className="text-xs text-gray-500 mt-1">
+                            <span className="font-semibold">CSV Columns (in order):</span> Company Name, GST Number, Email, Contact Person, Phone Number, Shipping Address
+                        </p>
+                    </div>
+                    <div className="flex space-x-2">
+                        <button 
+                            onClick={handleImportClick}
+                            className="flex items-center bg-white border-2 border-[#A8BF75] text-[#658C3E] px-4 py-2 rounded-lg shadow-md hover:bg-[#A8BF75]/10 transition-colors font-bold uppercase tracking-wide text-xs"
+                        >
+                            <ImportIcon />
+                            <span className="ml-2">Import CSV</span>
+                        </button>
+                        <button 
+                            onClick={handleOpenAdd}
+                            className="flex items-center bg-[#8EBF45] text-[#0D0D0D] px-4 py-2 rounded-lg shadow-md hover:bg-[#658C3E] hover:text-white transition-colors font-bold uppercase tracking-wide text-xs"
+                        >
+                            <PlusIcon />
+                            <span className="ml-2">Add Company</span>
+                        </button>
+                    </div>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleFileChange} 
+                        className="hidden" 
+                        accept=".csv,text/csv"
+                    />
                 </div>
-                <div className="flex space-x-2">
-                    <button 
-                        onClick={handleImportClick}
-                        className="flex items-center bg-white border-2 border-[#A8BF75] text-[#658C3E] px-4 py-2 rounded-lg shadow-md hover:bg-[#A8BF75]/10 transition-colors font-bold uppercase tracking-wide text-xs"
-                    >
-                        <ImportIcon />
-                        <span className="ml-2">Import CSV</span>
-                    </button>
+            )}
+
+            {isIframe && (
+                <div className="mb-4 flex justify-between items-center border-b pb-4">
+                    <h2 className="text-lg font-bold text-slate-800">Add New Company</h2>
                     <button 
                         onClick={handleOpenAdd}
                         className="flex items-center bg-[#8EBF45] text-[#0D0D0D] px-4 py-2 rounded-lg shadow-md hover:bg-[#658C3E] hover:text-white transition-colors font-bold uppercase tracking-wide text-xs"
                     >
                         <PlusIcon />
-                        <span className="ml-2">Add Company</span>
+                        <span className="ml-2">Create New Profile</span>
                     </button>
                 </div>
-                <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    onChange={handleFileChange} 
-                    className="hidden" 
-                    accept=".csv,text/csv"
-                />
-            </div>
+            )}
 
-            <div className="mb-6">
-                <input 
-                    type="text" 
-                    placeholder="Search companies..." 
-                    className="block w-full p-3 pl-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45] transition-shadow"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                />
-            </div>
+            {!isIframe && (
+                <div className="mb-6">
+                    <input 
+                        type="text" 
+                        placeholder="Search companies..." 
+                        className="block w-full p-3 pl-4 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45] transition-shadow"
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredProfiles.map(profile => (

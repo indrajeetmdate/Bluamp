@@ -71,6 +71,29 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
     const [startNumber, setStartNumber] = useState(1);
     const [openNoteId, setOpenNoteId] = useState<string | null>(null);
 
+    // Iframe modal for adding company
+    const [isAddCompanyModalOpen, setIsAddCompanyModalOpen] = useState(false);
+
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data.type === 'COMPANY_ADDED') {
+                const newCompany = event.data.company;
+                setFormData(prev => ({ ...prev, supplier: newCompany.name }));
+                setIsAddCompanyModalOpen(false);
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
+
+    const handleSupplierChange = (value: string) => {
+        if (value === 'ADD_NEW') {
+            setIsAddCompanyModalOpen(true);
+        } else {
+            setFormData({ ...formData, supplier: value });
+        }
+    };
+
     // Helper to determine if category requires serial tracking
     const isTrackedCategory = (cat: string) => (cat || '').toLowerCase() === 'cell';
 
@@ -675,7 +698,15 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
 
                         <div>
                             <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Supplier</label>
-                            <input type="text" value={formData.supplier} onChange={e => setFormData({ ...formData, supplier: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm" />
+                            <select 
+                                value={formData.supplier} 
+                                onChange={e => handleSupplierChange(e.target.value)} 
+                                className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm bg-white"
+                            >
+                                <option value="">Select Supplier</option>
+                                {companyProfiles.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                <option value="ADD_NEW" className="font-bold text-[#658C3E]">+ Add New...</option>
+                            </select>
                         </div>
 
                         <div>
@@ -822,6 +853,24 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                     </div>
                 </form>
             </Modal>
+            {/* Add Company Modal with Iframe */}
+            {isAddCompanyModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 text-left">
+                        <div className="flex justify-between items-center p-4 border-b">
+                            <h2 className="text-lg font-bold text-slate-800">Add New Company Profile</h2>
+                            <button onClick={() => setIsAddCompanyModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-2">✕</button>
+                        </div>
+                        <div className="flex-1 min-h-[500px]">
+                            <iframe 
+                                src="/?mode=add_company" 
+                                className="w-full h-full border-none"
+                                title="Add Company"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

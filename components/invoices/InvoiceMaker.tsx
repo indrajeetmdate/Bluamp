@@ -96,6 +96,37 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
     const [priceDropdownIdx, setPriceDropdownIdx] = useState<number | null>(null);
     const [priceSuggestions, setPriceSuggestions] = useState<PriceListItem[]>([]);
 
+    // Iframe modal for adding company
+    const [isAddCompanyModalOpen, setIsAddCompanyModalOpen] = useState(false);
+    const [lastSelectedType, setLastSelectedType] = useState<'issuer' | 'receiver' | null>(null);
+
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data.type === 'COMPANY_ADDED') {
+                const newCompany = event.data.company;
+                // The state 'companyProfiles' comes from props, so we rely on the parent (App.tsx) 
+                // to handle the global state update if it also listens, or we assume Supabase 
+                // handles the sync. But for immediate selection:
+                if (lastSelectedType) {
+                    loadCompanyProfile(lastSelectedType, newCompany.name);
+                }
+                setIsAddCompanyModalOpen(false);
+                setLastSelectedType(null);
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [lastSelectedType]);
+
+    const handleDropdownChange = (type: 'issuer' | 'receiver', value: string) => {
+        if (value === 'ADD_NEW') {
+            setLastSelectedType(type);
+            setIsAddCompanyModalOpen(true);
+        } else {
+            loadCompanyProfile(type, value);
+        }
+    };
+
     const handleDescriptionChange = (idx: number, value: string) => {
         updateItem(idx, 'description', value);
         if (value.length >= 2 && priceList.length > 0) {
@@ -840,7 +871,11 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                     {/* Issuer */}
                     <div className="bg-slate-50 p-3 rounded border">
                         <div className="flex justify-between items-center mb-2"><h3 className="text-sm font-bold text-slate-700">From (Issuer)</h3>
-                            {companyProfiles.length > 0 && (<select className="text-xs p-1 border rounded max-w-[120px]" onChange={(e) => loadCompanyProfile('issuer', e.target.value)}><option value="">Load Profile</option>{companyProfiles.map(cp => <option key={cp.id} value={cp.name}>{cp.name}</option>)}</select>)}
+                            <select className="text-xs p-1 border rounded max-w-[120px]" onChange={(e) => handleDropdownChange('issuer', e.target.value)}>
+                                <option value="">Load Profile</option>
+                                {companyProfiles.map(cp => <option key={cp.id} value={cp.name}>{cp.name}</option>)}
+                                <option value="ADD_NEW" className="font-bold text-[#658C3E]">+ Add New...</option>
+                            </select>
                         </div>
                         <input className="w-full text-sm p-2 border rounded mb-2" placeholder="Company Name" value={doc.issuer_details.name || ''} onChange={e => updateParty('issuer', 'name', e.target.value)} />
                         <textarea className="w-full text-sm p-2 border rounded" placeholder="Address" rows={2} value={doc.issuer_details.address || ''} onChange={e => updateParty('issuer', 'address', e.target.value)} />
@@ -869,7 +904,11 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                     <div className="bg-slate-50 p-3 rounded border">
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="text-sm font-bold text-slate-700">Billed To (Receiver)</h3>
-                            {companyProfiles.length > 0 && (<select className="text-xs p-1 border rounded max-w-[120px]" onChange={(e) => loadCompanyProfile('receiver', e.target.value)}><option value="">Load Profile</option>{companyProfiles.map(cp => <option key={cp.id} value={cp.name}>{cp.name}</option>)}</select>)}
+                            <select className="text-xs p-1 border rounded max-w-[120px]" onChange={(e) => handleDropdownChange('receiver', e.target.value)}>
+                                <option value="">Load Profile</option>
+                                {companyProfiles.map(cp => <option key={cp.id} value={cp.name}>{cp.name}</option>)}
+                                <option value="ADD_NEW" className="font-bold text-[#658C3E]">+ Add New...</option>
+                            </select>
                         </div>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-xs text-slate-400">Label:</span>
@@ -1485,6 +1524,24 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                     </div>{/* end print-only */}
                 </div>
             </div>
+            {/* Add Company Modal with Iframe */}
+            {isAddCompanyModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+                        <div className="flex justify-between items-center p-4 border-b">
+                            <h2 className="text-lg font-bold text-slate-800">Add New Company Profile</h2>
+                            <button onClick={() => setIsAddCompanyModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-2">✕</button>
+                        </div>
+                        <div className="flex-1 min-h-[500px]">
+                            <iframe 
+                                src="/?mode=add_company" 
+                                className="w-full h-full border-none"
+                                title="Add Company"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

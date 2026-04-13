@@ -60,6 +60,20 @@ const App: React.FC = () => {
   const [productionDraft, setProductionDraft] = useState<{ receivedGoodId: string; serials: string[] } | null>(null);
 
   useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'COMPANY_ADDED') {
+        const newCompany = event.data.company;
+        setCompanyProfiles(prev => {
+          if (prev.some(c => c.id === newCompany.id)) return prev;
+          return [...prev, newCompany];
+        });
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [setCompanyProfiles]);
+
+  useEffect(() => {
     if (users.length === 0) {
         // Wait for sync
     }
@@ -300,6 +314,20 @@ const App: React.FC = () => {
         return null;
     }
   }, [view, receivedGoods, recipes, wipItems, finishedGoods, repairItems, logs, users, currentUser, addLogEntry, setReceivedGoods, setWipItems, setFinishedGoods, setRepairItems, setRecipes, testResults, setTestResults, companyProfiles, setCompanyProfiles, invoiceDraft, productionDraft, rooms, storageUnits, storageItems, setRooms, setStorageUnits, setStorageItems, suppliesRecords, setSuppliesRecords, isFinanceUnlocked]);
+
+  // --- COMPANY PROFILES IFRAME ROUTE ---
+  if (mode === 'add_company') {
+      return (
+        <div className="min-h-screen bg-white p-4">
+           <CompanyProfiles 
+              companyProfiles={companyProfiles}
+              setCompanyProfiles={setCompanyProfiles}
+              addLogEntry={addLogEntry}
+              isIframe={true}
+           />
+        </div>
+      );
+  }
 
   // --- MASTER SEARCH IFRAME ROUTE ---
   if (mode === 'master_search') {

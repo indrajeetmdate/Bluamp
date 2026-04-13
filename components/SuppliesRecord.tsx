@@ -30,6 +30,34 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
     is_shipped: false
   });
 
+  // Iframe modal for adding company
+  const [isAddCompanyModalOpen, setIsAddCompanyModalOpen] = useState(false);
+  const [lastSelectedType, setLastSelectedType] = useState<'from_company' | 'to_company' | null>(null);
+
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'COMPANY_ADDED') {
+        const newCompany = event.data.company;
+        if (lastSelectedType) {
+          setNewItem(prev => ({ ...prev, [lastSelectedType]: newCompany.name }));
+        }
+        setIsAddCompanyModalOpen(false);
+        setLastSelectedType(null);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [lastSelectedType]);
+
+  const handleDropdownChange = (type: 'from_company' | 'to_company', value: string) => {
+    if (value === 'ADD_NEW') {
+      setLastSelectedType(type);
+      setIsAddCompanyModalOpen(true);
+    } else {
+      setNewItem({ ...newItem, [type]: value });
+    }
+  };
+
   const handleAddItem = () => {
     if (!newItem.item_name) return;
 
@@ -143,10 +171,11 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
               <select
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45]/20 focus:border-[#8EBF45]"
                 value={newItem.from_company}
-                onChange={(e) => setNewItem({ ...newItem, from_company: e.target.value })}
+                onChange={(e) => handleDropdownChange('from_company', e.target.value)}
               >
                 <option value="">Select Company</option>
                 {companyProfiles.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                <option value="ADD_NEW" className="font-bold text-[#658C3E]">+ Add New...</option>
               </select>
             </div>
             <div className="space-y-1">
@@ -154,10 +183,11 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
               <select
                 className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45]/20 focus:border-[#8EBF45]"
                 value={newItem.to_company}
-                onChange={(e) => setNewItem({ ...newItem, to_company: e.target.value })}
+                onChange={(e) => handleDropdownChange('to_company', e.target.value)}
               >
                 <option value="">Select Company</option>
                 {companyProfiles.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                <option value="ADD_NEW" className="font-bold text-[#658C3E]">+ Add New...</option>
               </select>
             </div>
           </div>
@@ -283,6 +313,24 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
           </tbody>
         </table>
       </div>
+      {/* Add Company Modal with Iframe */}
+      {isAddCompanyModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 text-left">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h2 className="text-lg font-bold text-slate-800">Add New Company Profile</h2>
+              <button onClick={() => setIsAddCompanyModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-2">✕</button>
+            </div>
+            <div className="flex-1 min-h-[500px]">
+              <iframe 
+                src="/?mode=add_company" 
+                className="w-full h-full border-none"
+                title="Add Company"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
