@@ -225,8 +225,8 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
     }, [initialData]);
 
     useEffect(() => {
-        setAmountInWordsStr(amountToWords(doc.totals.grand_total || 0));
-    }, [doc.totals.grand_total]);
+        setAmountInWordsStr(amountToWords(doc.totals.grand_total || 0, doc.totals.currency));
+    }, [doc.totals.grand_total, doc.totals.currency]);
 
     const fetchTemplates = async () => { const { data } = await supabase.from('invoice_templates').select('*'); if (data) setTemplates(data); };
 

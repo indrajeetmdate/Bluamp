@@ -55,8 +55,8 @@ export const safeRender = (value: any): string => {
   return String(value);
 };
 
-// --- Number to Words (Indian System) ---
-function numberToWords(n: number): string {
+// --- Number to Words ---
+function numberToWords(n: number, isIndianSystem: boolean = true): string {
   if (n === 0) return "Zero";
 
   const units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
@@ -64,29 +64,55 @@ function numberToWords(n: number): string {
 
   const numToWordsLessThan1000 = (num: number): string => {
     if (num === 0) return "";
-    if (num < 20) return units[num];
-    const t = Math.floor(num / 10);
-    const u = num % 10;
-    return tens[t] + (u > 0 ? " " + units[u] : "");
+    let res = "";
+    if (num >= 100) {
+      res += units[Math.floor(num / 100)] + " Hundred ";
+      num %= 100;
+    }
+    if (num > 0) {
+      if (num < 20) res += units[num];
+      else {
+        const t = Math.floor(num / 10);
+        const u = num % 10;
+        res += tens[t] + (u > 0 ? " " + units[u] : "");
+      }
+    }
+    return res.trim();
   };
 
-  const crore = Math.floor(n / 10000000);
-  n %= 10000000;
-  const lakh = Math.floor(n / 100000);
-  n %= 100000;
-  const thousand = Math.floor(n / 1000);
-  n %= 1000;
-  const hundred = Math.floor(n / 100);
-  n %= 100;
+  if (isIndianSystem) {
+    const crore = Math.floor(n / 10000000);
+    n %= 10000000;
+    const lakh = Math.floor(n / 100000);
+    n %= 100000;
+    const thousand = Math.floor(n / 1000);
+    n %= 1000;
+    const hundred = Math.floor(n / 100);
+    n %= 100;
 
-  let str = "";
-  if (crore > 0) str += numToWordsLessThan1000(crore) + " Crore ";
-  if (lakh > 0) str += numToWordsLessThan1000(lakh) + " Lakh ";
-  if (thousand > 0) str += numToWordsLessThan1000(thousand) + " Thousand ";
-  if (hundred > 0) str += numToWordsLessThan1000(hundred) + " Hundred ";
-  if (n > 0) str += numToWordsLessThan1000(n);
-
-  return str.trim();
+    let str = "";
+    if (crore > 0) str += numToWordsLessThan1000(crore) + " Crore ";
+    if (lakh > 0) str += numToWordsLessThan1000(lakh) + " Lakh ";
+    if (thousand > 0) str += numToWordsLessThan1000(thousand) + " Thousand ";
+    if (hundred > 0) str += numToWordsLessThan1000(hundred) + " Hundred ";
+    if (n > 0) str += numToWordsLessThan1000(n);
+    return str.trim();
+  } else {
+    // International System
+    const chunks: string[] = [];
+    const scales = ["", "Thousand", "Million", "Billion", "Trillion"];
+    let i = 0;
+    while (n > 0) {
+      const chunk = n % 1000;
+      if (chunk > 0) {
+        const chunkStr = numToWordsLessThan1000(chunk);
+        chunks.unshift(chunkStr + (scales[i] ? " " + scales[i] : ""));
+      }
+      n = Math.floor(n / 1000);
+      i++;
+    }
+    return chunks.join(" ").trim();
+  }
 }
 
 export const getCurrencySymbol = (currency?: string): string => {
@@ -101,6 +127,7 @@ export const getCurrencySymbol = (currency?: string): string => {
 export const amountToWords = (amount: number, currency: string = 'INR'): string => {
   const whole = Math.floor(amount);
   const fraction = Math.round((amount - whole) * 100);
+  const isIndian = currency === 'INR';
 
   let mainUnit = "Rupees";
   let fractionalUnit = "Paise";
@@ -113,9 +140,9 @@ export const amountToWords = (amount: number, currency: string = 'INR'): string 
       fractionalUnit = "Fen";
   }
 
-  let str = numberToWords(whole) + " " + mainUnit;
+  let str = numberToWords(whole, isIndian) + " " + mainUnit;
   if (fraction > 0) {
-    str += " and " + numberToWords(fraction) + " " + fractionalUnit;
+    str += " and " + numberToWords(fraction, isIndian) + " " + fractionalUnit;
   }
   return str + " Only";
 };
