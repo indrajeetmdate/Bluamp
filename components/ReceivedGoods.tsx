@@ -861,7 +861,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                             <h2 className="text-lg font-bold text-slate-800">Add New Company Profile</h2>
                             <button onClick={() => setIsAddCompanyModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-2">✕</button>
                         </div>
-                        <div className="flex-1 min-h-[500px]">
+                        <div className="flex-1 min-h-[600px] h-[75vh]">
                             <iframe 
                                 src="/?mode=add_company" 
                                 className="w-full h-full border-none"

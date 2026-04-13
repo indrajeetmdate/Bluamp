@@ -167,7 +167,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
         }
         newItems[idx].total_value = newItems[idx].taxable_value + (newItems[idx].cgst_amount || 0) + (newItems[idx].sgst_amount || 0) + (newItems[idx].igst_amount || 0);
         const newTotals = recalculateInvoiceTotals(newItems);
-        setDoc(prev => ({ ...prev, items: newItems, totals: newTotals }));
+        setDoc(prev => ({ ...prev, items: newItems, totals: { ...prev.totals, ...newTotals } }));
         setPriceDropdownIdx(null);
         setPriceSuggestions([]);
     };
@@ -377,7 +377,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
             return updatedItem;
         });
         const newTotals = recalculateInvoiceTotals(newItems);
-        setDoc(prev => ({ ...prev, items: newItems, totals: newTotals }));
+        setDoc(prev => ({ ...prev, items: newItems, totals: { ...prev.totals, ...newTotals } }));
     };
 
     const moveItem = (index: number, direction: number) => {
@@ -390,7 +390,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
 
     const deleteItem = (index: number) => {
         const newItems = doc.items.filter((_, i) => i !== index);
-        setDoc(prev => ({ ...prev, items: newItems, totals: recalculateInvoiceTotals(newItems) }));
+        setDoc(prev => ({ ...prev, items: newItems, totals: { ...prev.totals, ...recalculateInvoiceTotals(newItems) } }));
     };
 
     const handleItemImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -437,7 +437,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                         return {
                             ...prev,
                             items: updatedItems,
-                            totals: recalculateInvoiceTotals(updatedItems)
+                            totals: { ...prev.totals, ...recalculateInvoiceTotals(updatedItems) }
                         };
                     });
                 }
@@ -481,14 +481,14 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
             ...prev,
             invoice_metadata: { ...prev.invoice_metadata, tax_mode: mode },
             items: newItems,
-            totals: newTotals
+            totals: { ...prev.totals, ...newTotals }
         }));
     };
 
     const addItem = () => {
         const newItem: InvoiceItem = { description: 'New Item', hsn_sac: '', quantity: 1, unit_price: 0, discount: 0, taxable_value: 0, cgst_rate: 0, cgst_amount: 0, sgst_rate: 0, sgst_amount: 0, igst_rate: 18, igst_amount: 0, total_value: 0 };
         const newItems = [...doc.items, newItem];
-        setDoc(prev => ({ ...prev, items: newItems, totals: recalculateInvoiceTotals(newItems) }));
+        setDoc(prev => ({ ...prev, items: newItems, totals: { ...prev.totals, ...recalculateInvoiceTotals(newItems) } }));
     };
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -832,9 +832,19 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                         <div><label className="text-xs text-slate-500">Font</label><select className="text-sm p-2 border rounded w-full" value={config.font} onChange={e => setConfig({ ...config, font: e.target.value as any })}><option value="font-sans">Sans Serif</option><option value="font-serif">Serif</option></select></div>
                         <div><label className="text-xs text-slate-500">Accent</label><input type="color" className="w-full h-9 p-0 border rounded cursor-pointer" value={config.color} onChange={e => setConfig({ ...config, color: e.target.value })} /></div>
                     </div>
-                    <div>
-                        <label className="text-xs text-slate-500">Document Title</label>
-                        <input className="w-full text-sm p-2 border rounded font-bold uppercase" value={customTitle} onChange={e => setCustomTitle(e.target.value)} />
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="text-xs text-slate-500">Document Title</label>
+                            <input className="w-full text-sm p-2 border rounded font-bold uppercase" value={customTitle} onChange={e => setCustomTitle(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="text-xs text-slate-500">Currency</label>
+                            <select className="text-sm p-2 border rounded w-full" value={doc.totals?.currency || 'INR'} onChange={e => setDoc(prev => ({ ...prev, totals: { ...(prev.totals || { subtotal_taxable: 0, cgst_total: 0, sgst_total: 0, igst_total: 0, grand_total: 0 }), currency: e.target.value } }))}>
+                                <option value="INR">INR (₹)</option>
+                                <option value="USD">USD ($)</option>
+                                <option value="RMB">RMB (¥)</option>
+                            </select>
+                        </div>
                     </div>
                     <div>
                         <label className="text-xs text-slate-500 mb-1 block">Footer Text</label>
@@ -1532,7 +1542,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                             <h2 className="text-lg font-bold text-slate-800">Add New Company Profile</h2>
                             <button onClick={() => setIsAddCompanyModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-2">✕</button>
                         </div>
-                        <div className="flex-1 min-h-[500px]">
+                        <div className="flex-1 min-h-[600px] h-[75vh]">
                             <iframe 
                                 src="/?mode=add_company" 
                                 className="w-full h-full border-none"

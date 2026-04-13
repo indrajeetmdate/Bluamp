@@ -89,13 +89,33 @@ function numberToWords(n: number): string {
   return str.trim();
 }
 
-export const amountToWords = (amount: number): string => {
+export const getCurrencySymbol = (currency?: string): string => {
+  switch (currency) {
+    case 'USD': return '$';
+    case 'RMB': return '¥';
+    case 'INR':
+    default: return '₹';
+  }
+};
+
+export const amountToWords = (amount: number, currency: string = 'INR'): string => {
   const whole = Math.floor(amount);
   const fraction = Math.round((amount - whole) * 100);
 
-  let str = numberToWords(whole) + " Rupees";
+  let mainUnit = "Rupees";
+  let fractionalUnit = "Paise";
+
+  if (currency === 'USD') {
+      mainUnit = "Dollars";
+      fractionalUnit = "Cents";
+  } else if (currency === 'RMB') {
+      mainUnit = "Yuan";
+      fractionalUnit = "Fen";
+  }
+
+  let str = numberToWords(whole) + " " + mainUnit;
   if (fraction > 0) {
-    str += " and " + numberToWords(fraction) + " Paise";
+    str += " and " + numberToWords(fraction) + " " + fractionalUnit;
   }
   return str + " Only";
 };

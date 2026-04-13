@@ -153,36 +153,41 @@ const CompanyProfiles: React.FC<CompanyProfilesProps> = ({ companyProfiles, setC
 
     if (isIframe) {
         return (
-            <div className="p-4 bg-white min-h-screen">
-                <form onSubmit={handleSubmit} className="space-y-4 max-w-3xl mx-auto">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Company Name</label>
-                        <input type="text" name="name" value={formData.name} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">GST Number</label>
-                        <input type="text" name="gstNumber" value={formData.gstNumber} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" name="email" value={formData.email} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
-                    </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Contact Person</label>
-                            <input type="text" name="contactPerson" value={formData.contactPerson} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
+            <div className="p-6 bg-white min-h-screen flex flex-col justify-start">
+                <form onSubmit={handleSubmit} className="w-full max-w-4xl mx-auto flex flex-col h-full">
+                    <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="col-span-1 md:col-span-2">
+                            <h2 className="text-xl font-bold text-slate-800 mb-2 border-b pb-2">Add New Company</h2>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-                            <input type="text" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required />
+                            <label className="block text-sm font-semibold text-slate-700 mb-1">Company Name</label>
+                            <input type="text" name="name" value={formData.name} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg shadow-sm p-2.5 focus:ring-2 focus:ring-blue-500" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1">GST Number</label>
+                            <input type="text" name="gstNumber" value={formData.gstNumber} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg shadow-sm p-2.5 focus:ring-2 focus:ring-blue-500" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1">Contact Person</label>
+                            <input type="text" name="contactPerson" value={formData.contactPerson} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg shadow-sm p-2.5 focus:ring-2 focus:ring-blue-500" required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1">Phone Number</label>
+                            <input type="text" name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg shadow-sm p-2.5 focus:ring-2 focus:ring-blue-500" required />
+                        </div>
+                        <div className="col-span-1 md:col-span-2">
+                            <label className="block text-sm font-semibold text-slate-700 mb-1">Email</label>
+                            <input type="email" name="email" value={formData.email} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg shadow-sm p-2.5 focus:ring-2 focus:ring-blue-500" required />
+                        </div>
+                        <div className="col-span-1 md:col-span-2">
+                            <label className="block text-sm font-semibold text-slate-700 mb-1">Shipping Address</label>
+                            <textarea name="shippingAddress" value={formData.shippingAddress} onChange={handleInputChange} rows={3} className="w-full border border-slate-300 rounded-lg shadow-sm p-2.5 focus:ring-2 focus:ring-blue-500" required></textarea>
                         </div>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Shipping Address</label>
-                        <textarea name="shippingAddress" value={formData.shippingAddress} onChange={handleInputChange} rows={3} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required></textarea>
-                    </div>
-                    <div className="flex justify-end pt-4">
-                        <button type="submit" className="bg-[#8EBF45] text-[#0D0D0D] px-6 py-2.5 rounded-lg hover:bg-[#658C3E] hover:text-white font-bold uppercase tracking-wide text-sm shadow-md transition-colors">Save Profile</button>
+                    <div className="mt-8 pt-4 border-t border-slate-200">
+                        <button type="submit" className="w-full bg-[#8EBF45] hover:bg-[#729937] text-white p-3 rounded-lg flex items-center justify-center font-bold uppercase tracking-wider transition-colors shadow-md">
+                            Save Company Profile
+                        </button>
                     </div>
                 </form>
             </div>

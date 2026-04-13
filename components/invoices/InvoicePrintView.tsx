@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
 import { ExtractedInvoice, InvoiceItem, InvoiceTemplate } from '../../types';
-import { getTaxMode, safeRender, amountToWords } from '../../utils/invoiceUtils';
+import { getTaxMode, safeRender, amountToWords, getCurrencySymbol } from '../../utils/invoiceUtils';
 import { Printer, Download, X } from './Icons';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -93,8 +93,9 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
     const doc = invoice;
     const docType = doc.document_type || 'invoice';
     const customTitle = docType === 'generated_po' ? 'PURCHASE ORDER' : docType === 'quotation' ? 'QUOTATION' : 'INVOICE';
-    const amountInWordsStr = amountToWords(doc.totals?.grand_total || 0);
+    const amountInWordsStr = amountToWords(doc.totals?.grand_total || 0, doc.totals?.currency);
     const taxMode = getTaxMode(doc.issuer_details?.gstin, doc.receiver_details?.gstin, doc.invoice_metadata?.tax_mode);
+    const currencySymbol = getCurrencySymbol(doc.totals?.currency);
 
     const formatPrintDate = (dateStr: string) => {
         if (!dateStr) return '';
@@ -226,10 +227,10 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                                 {config.visibleColumns.description && <th className="py-1.5 text-slate-500 font-semibold uppercase tracking-wider">Description</th>}
                                                 {config.visibleColumns.hsn && <th className="py-1.5 text-left w-20 text-slate-500 font-semibold">HSN/SAC</th>}
                                                 {config.visibleColumns.quantity && <th className="py-1.5 text-right w-14 text-slate-500 font-semibold">Qty</th>}
-                                                {config.visibleColumns.rate && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Rate (₹)</th>}
-                                                {config.visibleColumns.discount && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Discount (₹)</th>}
+                                                {config.visibleColumns.rate && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Rate ({currencySymbol})</th>}
+                                                {config.visibleColumns.discount && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Discount ({currencySymbol})</th>}
                                                 {config.visibleColumns.taxableValue && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Taxable</th>}
-                                                {config.visibleColumns.total && <th className="py-1.5 text-right w-28 text-slate-900 font-bold pr-2">Total (₹)</th>}
+                                                {config.visibleColumns.total && <th className="py-1.5 text-right w-28 text-slate-900 font-bold pr-2">Total ({currencySymbol})</th>}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
@@ -315,7 +316,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                             <div className="w-44">
                                                 <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Subtotal</span><span>{(doc.totals?.subtotal_taxable || 0).toFixed(2)}</span></div>
                                                 <div className="flex justify-between text-[10px] text-slate-600 mb-0.5"><span>Tax</span><span>{((doc.totals?.cgst_total || 0) + (doc.totals?.sgst_total || 0) + (doc.totals?.igst_total || 0)).toFixed(2)}</span></div>
-                                                <div className="flex justify-between text-sm font-bold border-t border-slate-300 pt-1 mt-1" style={{ color: config.color }}><span>Total</span><span>₹ {(doc.totals?.grand_total || 0).toFixed(2)}</span></div>
+                                                <div className="flex justify-between text-sm font-bold border-t border-slate-300 pt-1 mt-1" style={{ color: config.color }}><span>Total</span><span>{currencySymbol} {(doc.totals?.grand_total || 0).toFixed(2)}</span></div>
                                             </div>
                                         </div>
                                     )}
@@ -325,7 +326,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose })
                                                 {(config.showQRCode ?? true) && doc.issuer_details?.bank_details?.upi_id && (
                                                     <div className="flex-shrink-0 bg-white p-1 border rounded shadow-sm self-start">
                                                         <QRCodeSVG 
-                                                            value={`upi://pay?pa=${doc.issuer_details.bank_details.upi_id}&pn=${encodeURIComponent(doc.issuer_details.name || '')}&am=${doc.totals?.grand_total || 0}&cu=INR`}
+                                                            value={`upi://pay?pa=${doc.issuer_details.bank_details.upi_id}&pn=${encodeURIComponent(doc.issuer_details.name || '')}&am=${doc.totals?.grand_total || 0}&cu=${doc.totals?.currency || 'INR'}`}
                                                             size={55}
                                                             level="M"
                                                         />
