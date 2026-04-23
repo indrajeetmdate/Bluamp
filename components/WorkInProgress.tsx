@@ -490,7 +490,9 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                 return nameMatch || idMatch;
             }).sort((a, b) => a.timestamp - b.timestamp);
 
-            const allSelected = batches.flatMap(b => consumedSerials[b.id] || []);
+            const allSelected = batches.flatMap(b => 
+                (consumedSerials[b.id] || []).map(s => ({ serial: s, receivedGoodId: b.id }))
+            );
 
             // Group serials by Unit and Cell Grades
             let serialsHtml = '';
@@ -504,8 +506,10 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                     const gradedGroups: { [grade: string]: string[] } = {};
                     let hasAnyGrade = false;
 
-                    unitSerials.forEach(s => {
-                        const tr = testResults.find(t => t.serialNumber === s);
+                    unitSerials.forEach(item => {
+                        const s = item.serial;
+                        const trList = testResults.filter(t => t.serialNumber === s && t.receivedGoodId === item.receivedGoodId);
+                        const tr = trList.sort((a,b) => b.timestamp - a.timestamp)[0];
                         if (tr && tr.grade) {
                             hasAnyGrade = true;
                             if (!gradedGroups[tr.grade]) gradedGroups[tr.grade] = [];
@@ -530,13 +534,13 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                         groupHtml += `</div>`;
                         serialsHtml += groupHtml;
                     } else {
-                        serialsHtml += `<span class="unit-badge" style="background-color: ${uColor}">U${i + 1}: ${unitSerials.join(', ')}</span> `;
+                        serialsHtml += `<span class="unit-badge" style="background-color: ${uColor}">U${i + 1}: ${unitSerials.map(u => u.serial).join(', ')}</span> `;
                     }
                 }
             }
 
             if (!serialsHtml && allSelected.length > 0) {
-                serialsHtml = allSelected.join(', '); // Fallback if simple list
+                serialsHtml = allSelected.map(a => a.serial).join(', '); // Fallback if simple list
             } else if (!serialsHtml) {
                 serialsHtml = '<span style="color:red; font-style:italic;">No specific serials allocated</span>';
             }
