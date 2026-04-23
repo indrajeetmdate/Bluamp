@@ -474,7 +474,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                           <th style="width: 25%">Component Item</th>
                           <th style="width: 8%">Qty/Unit</th>
                           <th style="width: 8%">Total</th>
-                          <th style="width: 59%">Assigned Serial Numbers (Color Coded by Unit)</th>
+                          <th style="width: 59%">Assigned Serial Numbers (Grouped by Unit & Cell Grade)</th>
                       </tr>
                   </thead>
                   <tbody>
@@ -492,7 +492,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
 
             const allSelected = batches.flatMap(b => consumedSerials[b.id] || []);
 
-            // Group serials by Unit
+            // Group serials by Unit and Cell Grades
             let serialsHtml = '';
             for (let i = 0; i < quantity; i++) {
                 const start = i * comp.quantityPerUnit;
@@ -501,7 +501,37 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
 
                 if (unitSerials.length > 0) {
                     const uColor = getColor(i);
-                    serialsHtml += `<span class="unit-badge" style="background-color: ${uColor}">U${i + 1}: ${unitSerials.join(', ')}</span> `;
+                    const gradedGroups: { [grade: string]: string[] } = {};
+                    let hasAnyGrade = false;
+
+                    unitSerials.forEach(s => {
+                        const tr = testResults.find(t => t.serialNumber === s);
+                        if (tr && tr.grade) {
+                            hasAnyGrade = true;
+                            if (!gradedGroups[tr.grade]) gradedGroups[tr.grade] = [];
+                            gradedGroups[tr.grade].push(s);
+                        } else {
+                            if (!gradedGroups['Ungraded']) gradedGroups['Ungraded'] = [];
+                            gradedGroups['Ungraded'].push(s);
+                        }
+                    });
+
+                    if (hasAnyGrade) {
+                        let groupHtml = `<div style="background-color: ${uColor}; padding: 4px 6px; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 6px; display: block;">`;
+                        groupHtml += `<strong style="display:block; margin-bottom: 3px; font-size: 11px;">U${i + 1}</strong>`;
+                        Object.keys(gradedGroups).sort().forEach(g => {
+                            if (gradedGroups[g].length > 0) {
+                                groupHtml += `<div style="margin-bottom: 2px;">
+                                    <span style="background: rgba(255,255,255,0.7); padding: 1px 4px; border-radius: 2px; font-weight: bold; margin-right: 4px;">Grade ${g}:</span>
+                                    <span>${gradedGroups[g].join(', ')}</span>
+                                </div>`;
+                            }
+                        });
+                        groupHtml += `</div>`;
+                        serialsHtml += groupHtml;
+                    } else {
+                        serialsHtml += `<span class="unit-badge" style="background-color: ${uColor}">U${i + 1}: ${unitSerials.join(', ')}</span> `;
+                    }
                 }
             }
 
