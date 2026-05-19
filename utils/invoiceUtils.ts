@@ -23,17 +23,18 @@ export const getTaxMode = (issuerGSTIN: string | undefined, receiverGSTIN: strin
 };
 
 export const calculateItemTotal = (item: InvoiceItem): number => {
-  return (item.taxable_value || 0) + (item.cgst_amount || 0) + (item.sgst_amount || 0) + (item.igst_amount || 0);
+  const total = (item.taxable_value || 0) + (item.cgst_amount || 0) + (item.sgst_amount || 0) + (item.igst_amount || 0);
+  return Math.ceil(total);
 };
 
 export const recalculateInvoiceTotals = (items: InvoiceItem[]): any => {
-  return items.reduce(
+  const result = items.reduce(
     (acc, item) => {
-      acc.subtotal_taxable += item.taxable_value || 0;
-      acc.discount_total += item.discount || 0;
-      acc.cgst_total += item.cgst_amount || 0;
-      acc.sgst_total += item.sgst_amount || 0;
-      acc.igst_total += item.igst_amount || 0;
+      acc.subtotal_taxable += Math.ceil(item.taxable_value || 0);
+      acc.discount_total += Math.ceil(item.discount || 0);
+      acc.cgst_total += Math.ceil(item.cgst_amount || 0);
+      acc.sgst_total += Math.ceil(item.sgst_amount || 0);
+      acc.igst_total += Math.ceil(item.igst_amount || 0);
       acc.grand_total += calculateItemTotal(item);
       return acc;
     },
@@ -46,6 +47,14 @@ export const recalculateInvoiceTotals = (items: InvoiceItem[]): any => {
       grand_total: 0,
     }
   );
+  return {
+    subtotal_taxable: Math.ceil(result.subtotal_taxable),
+    discount_total: Math.ceil(result.discount_total),
+    cgst_total: Math.ceil(result.cgst_total),
+    sgst_total: Math.ceil(result.sgst_total),
+    igst_total: Math.ceil(result.igst_total),
+    grand_total: Math.ceil(result.grand_total),
+  };
 };
 
 // --- Helper Functions ---
