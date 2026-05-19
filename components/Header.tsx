@@ -106,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
 
             {/* External Links */}
             <div className="w-px h-6 bg-slate-700 mx-2 self-center"></div>
-            <ExternalNavButton href="https://report.cnergy.co.in/">Reports</ExternalNavButton>
+            <ExternalNavButton href="https://support.cnergy.co.in/report">Reports</ExternalNavButton>
             <ExternalNavButton href="https://prismaticdata.cnergy.co.in">Prismatic data</ExternalNavButton>
           </nav>
 
