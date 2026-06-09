@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { ExtractedInvoice } from '../../types';
 import { generateCSV, generateCompanyProfileCSV, downloadFile, safeRender } from '../../utils/invoiceUtils';
-import { FileSpreadsheet, FileJson, Loader2, RefreshCw, Search, FileText, Plus, X, Building, ChevronDown, ChevronUp, Trash2, Download } from './Icons';
+import { FileSpreadsheet, FileJson, Loader2, RefreshCw, Search, FileText, Plus, X, Building, ChevronDown, ChevronUp, Trash2, Download, Mail, CheckCircle } from './Icons';
 import { ImportIcon } from '../icons/ImportIcon';
 import { PencilIcon } from '../icons/PencilIcon';
 import Modal from '../Modal';
@@ -198,6 +198,70 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
     const [itemsToImport, setItemsToImport] = useState<any[]>([]);
     const [sourceInvoice, setSourceInvoice] = useState<ExtractedInvoice | null>(null);
     const [printInvoice, setPrintInvoice] = useState<ExtractedInvoice | null>(null);
+    const [sendingMailId, setSendingMailId] = useState<string | null>(null);
+
+    const handleSendMail = async (inv: ExtractedInvoice) => {
+        // Handle POs where the other party might be in supplier_details
+        const targetEmail = inv.receiver_details?.email || inv.supplier_details?.email || inv.issuer_details?.email;
+        if (!targetEmail) {
+            alert("No email address found in this document to send to.");
+            return;
+        }
+
+        const confirmSend = window.confirm(`Send ${inv.document_type.replace(/_/g, ' ').toUpperCase()} to ${targetEmail}?`);
+        if (!confirmSend) return;
+
+        setSendingMailId(inv.id as string);
+        try {
+            const htmlContent = `
+                <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; padding: 20px;">
+                    <h2 style="color: #658C3E;">Datlion Cnergy</h2>
+                    <p>Hello,</p>
+                    <p>Please find the details for your recent document below:</p>
+                    <div style="background-color: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                        <p style="margin: 5px 0;"><strong>Document Type:</strong> ${inv.document_type.replace(/_/g, ' ').toUpperCase()}</p>
+                        <p style="margin: 5px 0;"><strong>Document Number:</strong> ${inv.invoice_metadata?.invoice_number || 'N/A'}</p>
+                        <p style="margin: 5px 0;"><strong>Date:</strong> ${inv.invoice_metadata?.invoice_date || 'N/A'}</p>
+                        <p style="margin: 5px 0; font-size: 1.1em;"><strong>Total Amount:</strong> ₹${(inv.totals?.grand_total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <p>If you have any questions, please reply to this email.</p>
+                    <p style="color: #666; font-size: 0.9em;">Best regards,<br/>Datlion Cnergy Team</p>
+                </div>
+            `;
+
+            const response = await fetch('/api/send-mail', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: targetEmail,
+                    subject: `Document ${inv.invoice_metadata?.invoice_number || ''} from Datlion Cnergy`,
+                    html: htmlContent
+                })
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || data.message || "Failed to send email");
+            }
+
+            const updatedMetadata = { ...inv.invoice_metadata, mail_sent: true };
+            const { error: updateError } = await supabase
+                .from('invoices')
+                .update({ invoice_metadata: updatedMetadata })
+                .match({ id: inv.id });
+
+            if (updateError) throw updateError;
+
+            setInvoices(prev => prev.map(item => item.id === inv.id ? { ...item, invoice_metadata: updatedMetadata } : item));
+            
+            alert("Mail sent successfully!");
+        } catch (err: any) {
+            console.error("Mail send error:", err);
+            alert("Error sending mail: " + err.message);
+        } finally {
+            setSendingMailId(null);
+        }
+    };
 
     const fetchInvoices = async () => {
         setLoading(true);
@@ -544,6 +608,13 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
                                             <td className="p-4 text-center flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
                                                 {onEditInvoice && <button onClick={() => onEditInvoice(inv)} className="p-2 text-slate-400 hover:text-[#8EBF45] hover:bg-[#8EBF45]/5 rounded-lg transition-all" title="Edit"><PencilIcon className="w-4 h-4" /></button>}
                                                 <button onClick={() => setPrintInvoice(inv)} className="p-2 text-slate-400 hover:text-[#8EBF45] hover:bg-[#8EBF45]/5 rounded-lg transition-all" title="Download / Print"><Download size={16} /></button>
+                                                {inv.invoice_metadata?.mail_sent ? (
+                                                    <button className="p-2 text-[#8EBF45] cursor-default" title="Mail Sent"><CheckCircle size={16} /></button>
+                                                ) : (
+                                                    <button onClick={() => handleSendMail(inv)} disabled={sendingMailId === inv.id} className="p-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Send Mail">
+                                                        {sendingMailId === inv.id ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+                                                    </button>
+                                                )}
                                                 {inv.document_type === 'invoice' && <button onClick={() => openNoteModal(inv)} className="p-2 text-[#658C3E] hover:bg-blue-50 rounded-lg text-xs font-bold" title="Add Note"><Plus size={14} /></button>}
                                                 {inv.source_type === 'purchase' && <button onClick={() => handleImportToInventory(inv)} className="p-2 text-[#658C3E] hover:bg-[#8EBF45]/5 rounded-lg text-xs font-bold" title="Import to Stock"><ImportIcon /></button>}
                                                 <button onClick={() => handleDeleteInvoice(inv.id as string)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Delete"><Trash2 size={16} /></button>

@@ -256,6 +256,8 @@ export interface ExtractedInvoice {
     employee_name?: string;
     expense_category?: string;
     tax_mode?: 'intra' | 'inter';
+    mail_sent?: boolean;
+    ui_config?: Record<string, any>;
   };
   items: InvoiceItem[];
   totals: {
