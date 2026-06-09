@@ -241,6 +241,7 @@ export interface ExtractedInvoice {
   issuer_details: InvoiceParty;
   receiver_details: InvoiceParty;
   shipped_to_details?: InvoiceParty;
+  supplier_details?: InvoiceParty;
   invoice_metadata: {
     invoice_number: string;
     invoice_date: string;

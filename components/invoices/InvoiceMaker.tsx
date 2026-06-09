@@ -99,7 +99,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
 
     // Iframe modal for adding company
     const [isAddCompanyModalOpen, setIsAddCompanyModalOpen] = useState(false);
-    const [lastSelectedType, setLastSelectedType] = useState<'issuer' | 'receiver' | null>(null);
+    const [lastSelectedType, setLastSelectedType] = useState<'issuer' | 'receiver' | 'supplier' | null>(null);
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -119,7 +119,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
         return () => window.removeEventListener('message', handleMessage);
     }, [lastSelectedType]);
 
-    const handleDropdownChange = (type: 'issuer' | 'receiver', value: string) => {
+    const handleDropdownChange = (type: 'issuer' | 'receiver' | 'supplier', value: string) => {
         if (value === 'ADD_NEW') {
             setLastSelectedType(type);
             setIsAddCompanyModalOpen(true);
@@ -195,6 +195,9 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
             const dataToLoad = { ...initialData };
             if ((dataToLoad.invoice_metadata as any)?.shipped_to_details) {
                 dataToLoad.shipped_to_details = (dataToLoad.invoice_metadata as any).shipped_to_details;
+            }
+            if ((dataToLoad.invoice_metadata as any)?.supplier_details) {
+                dataToLoad.supplier_details = (dataToLoad.invoice_metadata as any).supplier_details;
             }
             setDoc(dataToLoad);
             const type = initialData.document_type === 'generated_po' ? 'po' : initialData.document_type === 'generated_quotation' ? 'quotation' : initialData.document_type === 'generated_proforma_invoice' ? 'proforma' : 'invoice';
@@ -295,8 +298,14 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
         }
     };
 
-    const updateParty = (side: 'issuer' | 'receiver', field: string, val: string) => {
-        setDoc(prev => ({ ...prev, [side === 'issuer' ? 'issuer_details' : 'receiver_details']: { ...prev[side === 'issuer' ? 'issuer_details' : 'receiver_details'], [field]: val } }));
+    const updateParty = (side: 'issuer' | 'receiver' | 'supplier', field: string, val: string) => {
+        setDoc(prev => {
+            const targetKey = side === 'issuer' ? 'issuer_details' : side === 'receiver' ? 'receiver_details' : 'supplier_details';
+            return {
+                ...prev,
+                [targetKey]: { ...(prev[targetKey] || {}), [field]: val }
+            };
+        });
     };
 
     const updateBankDetails = (field: keyof BankDetails, val: string) => {
@@ -306,16 +315,19 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
         });
     };
 
-    const loadCompanyProfile = (side: 'issuer' | 'receiver', companyName: string) => {
+    const loadCompanyProfile = (side: 'issuer' | 'receiver' | 'supplier', companyName: string) => {
         const profile = companyProfiles.find(c => c.name === companyName);
         if (profile) {
-            setDoc(prev => ({
-                ...prev,
-                [side === 'issuer' ? 'issuer_details' : 'receiver_details']: {
-                    ...prev[side === 'issuer' ? 'issuer_details' : 'receiver_details'],
-                    name: profile.name, gstin: profile.gstNumber, address: profile.shippingAddress, email: profile.email, phone: profile.phoneNumber, contact_person: profile.contactPerson
-                }
-            }));
+            setDoc(prev => {
+                const targetKey = side === 'issuer' ? 'issuer_details' : side === 'receiver' ? 'receiver_details' : 'supplier_details';
+                return {
+                    ...prev,
+                    [targetKey]: {
+                        ...(prev[targetKey] || {}),
+                        name: profile.name, gstin: profile.gstNumber, address: profile.shippingAddress, email: profile.email, phone: profile.phoneNumber, contact_person: profile.contactPerson
+                    }
+                };
+            });
         }
     };
 
@@ -538,6 +550,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                 invoice_metadata: {
                     ...doc.invoice_metadata,
                     shipped_to_details: doc.shipped_to_details,
+                    supplier_details: doc.supplier_details,
                     ui_config: {
                         ...config,
                         logoUrl: logo || undefined,
@@ -555,7 +568,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
             };
 
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { id, timestamp, shipped_to_details, ...cleanRecord } = record as any;
+            const { id, timestamp, shipped_to_details, supplier_details, ...cleanRecord } = record as any;
             const { error: insertError } = await supabase.from('invoices').insert([cleanRecord]);
             if (insertError) throw insertError;
 
@@ -943,6 +956,30 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                         </div>
                     </div>
 
+                    {/* Supplier Details (Only for PO) */}
+                    {docType === 'po' && (
+                        <div className="bg-orange-50/50 p-3 rounded border mb-6">
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="text-sm font-bold text-slate-700">Supplier Details</h3>
+                                <select className="text-xs p-1 border rounded max-w-[120px]" onChange={(e) => handleDropdownChange('supplier', e.target.value)}>
+                                    <option value="">Load Profile</option>
+                                    {companyProfiles.map(cp => <option key={cp.id} value={cp.name}>{cp.name}</option>)}
+                                    <option value="ADD_NEW" className="font-bold text-[#658C3E]">+ Add New...</option>
+                                </select>
+                            </div>
+                            <input className="w-full text-sm p-2 border rounded mb-2" placeholder="Supplier Name" value={doc.supplier_details?.name || ''} onChange={e => updateParty('supplier', 'name', e.target.value)} />
+                            <textarea className="w-full text-sm p-2 border rounded" placeholder="Address" rows={2} value={doc.supplier_details?.address || ''} onChange={e => updateParty('supplier', 'address', e.target.value)} />
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                <input className="w-full text-sm p-2 border rounded" placeholder="GSTIN" value={doc.supplier_details?.gstin || ''} onChange={e => updateParty('supplier', 'gstin', e.target.value)} />
+                                <input className="w-full text-sm p-2 border rounded" placeholder="PAN" value={doc.supplier_details?.pan || ''} onChange={e => updateParty('supplier', 'pan', e.target.value)} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                <input className="w-full text-sm p-2 border rounded" placeholder="Email" value={doc.supplier_details?.email || ''} onChange={e => updateParty('supplier', 'email', e.target.value)} />
+                                <input className="w-full text-sm p-2 border rounded" placeholder="Phone" value={doc.supplier_details?.phone || ''} onChange={e => updateParty('supplier', 'phone', e.target.value)} />
+                            </div>
+                        </div>
+                    )}
+
                     {/* Receiver (Billed To) */}
                     <div className="bg-slate-50 p-3 rounded border">
                         <div className="flex justify-between items-center mb-2">
@@ -1087,6 +1124,21 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                 )}
                             </div>
                         </div>
+
+                        {/* Supplier Details (Only for PO) */}
+                        {docType === 'po' && doc.supplier_details?.name && (
+                            <div className="mb-4">
+                                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Supplier Details</h3>
+                                <h3 className="font-bold text-sm text-slate-900 leading-tight">{safeRender(doc.supplier_details.name)}</h3>
+                                <p className="text-xs text-slate-600 whitespace-pre-line mb-1 leading-tight">{safeRender(doc.supplier_details.address)}</p>
+                                <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
+                                    {doc.supplier_details.gstin && <span><strong>GSTIN:</strong> {doc.supplier_details.gstin}</span>}
+                                    {doc.supplier_details.pan && <span><strong>PAN:</strong> {doc.supplier_details.pan}</span>}
+                                    {doc.supplier_details.email && <span>{doc.supplier_details.email}</span>}
+                                    {doc.supplier_details.phone && <span>Ph: {doc.supplier_details.phone}</span>}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="mb-4 flex gap-6">
                             {/* Billed To */}
@@ -1380,6 +1432,21 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* ---- SUPPLIER DETAILS (Only for PO) ---- */}
+                                    {docType === 'po' && doc.supplier_details?.name && (
+                                        <div className="mb-3">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Supplier Details</p>
+                                            <h3 className="font-bold text-sm text-slate-900 leading-tight">{safeRender(doc.supplier_details.name)}</h3>
+                                            <p className="text-xs text-slate-600 whitespace-pre-line mb-1 leading-tight">{safeRender(doc.supplier_details.address)}</p>
+                                            <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
+                                                {doc.supplier_details.gstin && <span><strong>GSTIN:</strong> {doc.supplier_details.gstin}</span>}
+                                                {doc.supplier_details.pan && <span><strong>PAN:</strong> {doc.supplier_details.pan}</span>}
+                                                {doc.supplier_details.email && <span>{doc.supplier_details.email}</span>}
+                                                {doc.supplier_details.phone && <span>Ph: {doc.supplier_details.phone}</span>}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* ---- RECEIVER (Billed + Shipped) ---- */}
                                     <div className="mb-3 flex gap-6">
