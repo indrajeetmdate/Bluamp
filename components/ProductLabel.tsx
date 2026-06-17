@@ -179,7 +179,7 @@ const ProductLabel: React.FC<ProductLabelProps> = ({ data, id }) => {
                             spots.push({ label: 'Batch / ID', value: data.productId });
                         } else if (data.itemType === 'Inverter') {
                             spots.push({ label: 'Rating', value: data.ratedPower || '-' });
-                            spots.push({ label: 'Type', value: data.inverterType || '-' });
+                            spots.push({ label: 'Type', value: (!data.inverterType || data.inverterType === 'Non Solar') ? 'HUPS' : data.inverterType });
                             spots.push({ label: 'Voltage', value: data.outputVoltage ? `${data.outputVoltage}V` : '-' });
                             spots.push({ label: 'Mfg Date', value: data.mfgDate });
                             spots.push({ label: '', value: '' });
