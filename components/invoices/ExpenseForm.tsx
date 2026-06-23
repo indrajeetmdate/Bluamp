@@ -27,7 +27,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser }) => {
         date: new Date().toISOString().split('T')[0],
         category: 'Travel & Commute',
         description: '',
-        amount: ''
+        amount: '',
+        imageLink: ''
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -76,7 +77,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser }) => {
                     subtotal_taxable: amount,
                     grand_total: amount
                 },
-                uploaded_by: currentUser?.username || 'system'
+                uploaded_by: currentUser?.username || 'system',
+                image_link: formData.imageLink || ''
             };
             
             delete payload.timestamp;
@@ -90,7 +92,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser }) => {
                 date: new Date().toISOString().split('T')[0],
                 category: 'Travel & Commute',
                 description: '',
-                amount: ''
+                amount: '',
+                imageLink: ''
             });
             setTimeout(() => setSuccess(false), 3000);
 
@@ -167,6 +170,17 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser }) => {
                             placeholder="Details of the expense..."
                             value={formData.description}
                             onChange={e => setFormData({...formData, description: e.target.value})}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Invoice Image Link (Optional)</label>
+                        <input 
+                            type="url"
+                            className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#8EBF45] outline-none"
+                            placeholder="https://..."
+                            value={formData.imageLink}
+                            onChange={e => setFormData({...formData, imageLink: e.target.value})}
                         />
                     </div>
 

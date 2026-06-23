@@ -293,6 +293,7 @@ export interface ExtractedInvoice {
   raw_text?: string;
   requires_review: boolean;
   uploaded_by?: string;
+  image_link?: string;
 }
 
 export interface InvoiceTemplate {
@@ -333,5 +334,6 @@ export const EMPTY_INVOICE: ExtractedInvoice = {
   invoice_metadata: { invoice_number: '', invoice_date: '' },
   items: [],
   totals: { subtotal_taxable: 0, cgst_total: 0, sgst_total: 0, igst_total: 0, grand_total: 0 },
-  requires_review: true
+  requires_review: true,
+  image_link: ''
 };

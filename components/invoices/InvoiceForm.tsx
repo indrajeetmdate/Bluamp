@@ -111,6 +111,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ data, onChange }) => {
           <InputField label="Invoice Number" value={data.invoice_metadata?.invoice_number} onChange={(v) => updateMetadata('invoice_number', v)} />
           <InputField label="Date" type="date" value={data.invoice_metadata?.invoice_date} onChange={(v) => updateMetadata('invoice_date', v)} />
           <InputField label="Due Date" type="date" value={data.invoice_metadata?.due_date} onChange={(v) => updateMetadata('due_date', v)} />
+          <InputField label="Image Link" type="url" value={data.image_link} onChange={(v) => onChange({ ...data, image_link: v })} />
           
           <div className="flex flex-col">
             <label className="text-xs font-medium text-slate-500 mb-1">Type</label>
