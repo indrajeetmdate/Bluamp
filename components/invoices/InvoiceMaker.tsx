@@ -39,14 +39,23 @@ type ExtendedConfig = InvoiceTemplate['config'] & {
 const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfiles = [], initialData, priceList = [] }) => {
     const [docType, setDocType] = useState<'invoice' | 'po' | 'quotation' | 'proforma'>('invoice');
     const [customTitle, setCustomTitle] = useState('INVOICE');
-    const [doc, setDoc] = useState<ExtractedInvoice>({ 
-        ...EMPTY_INVOICE, 
-        source_type: 'sales', 
-        document_type: 'generated_invoice',
-        issuer_details: { 
-            ...EMPTY_INVOICE.issuer_details, 
-            bank_details: { upi_id: '8956340980@ibl' } 
-        } 
+    const [doc, setDoc] = useState<ExtractedInvoice>(() => {
+        const base = initialData || EMPTY_INVOICE;
+        return { 
+            ...EMPTY_INVOICE,
+            ...base, 
+            source_type: 'sales', 
+            document_type: 'generated_invoice',
+            receiver_details: base.receiver_details || EMPTY_INVOICE.receiver_details,
+            issuer_details: { 
+                ...EMPTY_INVOICE.issuer_details,
+                ...(base.issuer_details || {}),
+                bank_details: { upi_id: '8956340980@ibl', ...(base.issuer_details?.bank_details || {}) } 
+            },
+            shipped_to_details: base.shipped_to_details || EMPTY_INVOICE.shipped_to_details,
+            supplier_details: base.supplier_details || EMPTY_INVOICE.supplier_details,
+            invoice_metadata: base.invoice_metadata || EMPTY_INVOICE.invoice_metadata
+        };
     });
 
     // Default config with showReceiverSign
@@ -261,7 +270,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
             setCustomTitle(data.document_type === 'invoice' ? 'INVOICE' : data.document_type === 'po' ? 'PURCHASE ORDER' : data.document_type === 'quotation' ? 'QUOTATION' : 'PROFORMA INVOICE');
         }
         if (data.template_name) {
-            const tmpl = templates.find(t => t.name.toLowerCase() === data.template_name.toLowerCase());
+            const tmpl = templates.find(t => t.name?.toLowerCase() === String(data.template_name).toLowerCase());
             if (tmpl) {
                 setSelectedTemplateId(tmpl.id || '');
                 loadTemplate(tmpl);
@@ -287,7 +296,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
             }
             
             // Default Customer (Receiver) and Shipped To to Datlion
-            const datlionProfile = companyProfiles.find(c => c.name.toUpperCase().includes('DATLION CNERGY'));
+            const datlionProfile = companyProfiles.find(c => c.name?.toUpperCase()?.includes('DATLION CNERGY'));
             if (datlionProfile) {
                 loadCompanyProfile('receiver', datlionProfile.name);
             } else {
