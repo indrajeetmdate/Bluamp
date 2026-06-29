@@ -475,6 +475,14 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                 return { ...prev, issuer_details: updatedIssuer };
             });
         }
+
+        // Auto-generate date and invoice number
+        const today = new Date().toISOString().split('T')[0];
+        setDoc(prev => ({
+            ...prev,
+            invoice_metadata: { ...prev.invoice_metadata, invoice_date: today }
+        }));
+        generateInvoiceNumber(tmpl.type as string);
     };
 
     const updateParty = (side: 'issuer' | 'receiver' | 'supplier', field: string, val: string) => {
