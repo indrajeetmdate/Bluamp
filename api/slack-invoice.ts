@@ -2,14 +2,12 @@ import { createClient } from '@supabase/supabase-js';
 import { GoogleGenAI, Type } from '@google/genai';
 import { waitUntil } from '@vercel/functions';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://bfkxdpripwjxenfvwpfu.supabase.co';
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+// IMPORTANT: VITE_* env vars are NOT available in Vercel serverless functions (they are build-time only).
+// We must use the same hardcoded fallbacks as supabaseClient.ts to ensure database access always works.
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://bfkxdpripwjxenfvwpfu.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJma3hkcHJpcHdqeGVuZnZ3cGZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM1MzE5MjUsImV4cCI6MjA3OTEwNzkyNX0.5JSsA1iYBE5C6LNNWXfJ58JlB2U2TFvVradyON3WIQs';
 
-if (!supabaseKey) {
-  console.warn('Supabase key missing in API route');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey!);
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
 
@@ -71,17 +69,25 @@ function cleanAndParseJSON(raw: string) {
 
 async function processInvoice(userText: string, responseUrl: string) {
     try {
-        const [{ data: companyData }, { data: priceData }, { data: templateData }] = await Promise.all([
-          supabase.from('companies').select('name'),
+        const [companyResult, priceResult, templateResult] = await Promise.all([
+          supabase.from('company_profiles').select('name'),
           supabase.from('price_list').select('model_name, price_without_gst'),
           supabase.from('invoice_templates').select('name')
         ]);
+
+        // Log errors if any query failed
+        if (companyResult.error) console.error('[Slack] company_profiles query failed:', companyResult.error);
+        if (priceResult.error) console.error('[Slack] price_list query failed:', priceResult.error);
+        if (templateResult.error) console.error('[Slack] invoice_templates query failed:', templateResult.error);
     
         const context = {
-          companies: (companyData || []).map((c: any) => c.name),
-          products: (priceData || []).map((p: any) => ({ model_name: p.model_name, price_without_gst: p.price_without_gst })),
-          templates: (templateData || []).map((t: any) => t.name)
+          companies: (companyResult.data || []).map((c: any) => c.name).filter(Boolean),
+          products: (priceResult.data || []).map((p: any) => ({ model_name: p.model_name, price_without_gst: p.price_without_gst })),
+          templates: (templateResult.data || []).map((t: any) => t.name).filter(Boolean)
         };
+
+        // Diagnostic: log context sizes so we can verify data is flowing
+        console.log(`[Slack] Context loaded — Companies: ${context.companies.length}, Products: ${context.products.length}, Templates: ${context.templates.length}`);
     
         const ai = new GoogleGenAI({ apiKey: API_KEY });
         
@@ -123,6 +129,7 @@ async function processInvoice(userText: string, responseUrl: string) {
         });
     
         const parsedData = cleanAndParseJSON(response.text || '{}');
+        console.log('[Slack] AI Response:', JSON.stringify(parsedData));
     
         const draftPayload = {
           filename: 'AI_Assistant_Draft',

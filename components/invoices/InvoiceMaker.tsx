@@ -282,7 +282,11 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
             setCustomTitle(data.document_type === 'invoice' ? 'INVOICE' : data.document_type === 'po' ? 'PURCHASE ORDER' : data.document_type === 'quotation' ? 'QUOTATION' : 'PROFORMA INVOICE');
         }
         if (data.template_name) {
-            const tmpl = templates.find(t => t.name?.toLowerCase() === String(data.template_name).toLowerCase());
+            const normalizedAiName = String(data.template_name).toLowerCase().trim();
+            const tmpl = templates.find(t => {
+                const dbName = (t.name || '').toLowerCase().trim();
+                return dbName === normalizedAiName || dbName.includes(normalizedAiName) || normalizedAiName.includes(dbName);
+            });
             if (tmpl) {
                 setSelectedTemplateId(tmpl.id || '');
                 loadTemplate(tmpl);
