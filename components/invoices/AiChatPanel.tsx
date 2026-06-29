@@ -38,7 +38,7 @@ const AiChatPanel: React.FC<AiChatPanelProps> = ({ companyProfiles, priceList, t
     };
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+        <div className="fixed bottom-20 right-8 z-50 flex flex-col items-end">
             {isOpen && (
                 <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-80 mb-4 overflow-hidden animate-fade-in flex flex-col">
                     <div className="bg-slate-800 text-white p-3 font-bold text-sm flex justify-between items-center">

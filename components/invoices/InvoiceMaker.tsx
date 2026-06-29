@@ -268,6 +268,15 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
             }
         }
 
+        // Generate date and invoice number
+        const today = new Date().toISOString().split('T')[0];
+        setDoc(prev => ({
+            ...prev,
+            invoice_metadata: { ...prev.invoice_metadata, invoice_date: today }
+        }));
+        
+        generateInvoiceNumber(data.document_type, data.company_match?.name);
+
         // 2. Company
         if (data.company_match?.name) {
             loadCompanyProfile('receiver', data.company_match.name);
@@ -729,7 +738,8 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
         document.title = originalTitle;
     };
 
-    const generateInvoiceNumber = async () => {
+    const generateInvoiceNumber = async (overrideDocType?: string, overrideOtherParty?: string) => {
+        const currentDocType = overrideDocType || docType;
         const date = new Date();
         const month = date.getMonth() + 1;
         const year = date.getFullYear();
@@ -751,9 +761,9 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
         const NEW_SYSTEM_START = new Date(2026, 3, 1); // April 1, 2026
         if (date >= NEW_SYSTEM_START) {
             let typeTag = 'INV';
-            if (docType === 'po') typeTag = 'PO';
-            else if (docType === 'quotation') typeTag = 'QUO';
-            else if (docType === 'proforma') typeTag = 'PRO';
+            if (currentDocType === 'po') typeTag = 'PO';
+            else if (currentDocType === 'quotation') typeTag = 'QUO';
+            else if (currentDocType === 'proforma') typeTag = 'PRO';
 
             const newPrefix = `${typeTag}/DC/${fyStr}/`;
             
@@ -791,14 +801,14 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
         const mm = String(month).padStart(2, '0');
 
         // Determine "Other Party" based on context for code
-        const otherPartyName = docType === 'invoice' || docType === 'proforma' ? doc.receiver_details.name : doc.issuer_details.name;
+        const otherPartyName = overrideOtherParty || (currentDocType === 'invoice' || currentDocType === 'proforma' ? doc.receiver_details.name : doc.issuer_details.name);
         let code = 'XX';
         if (otherPartyName) {
             code = otherPartyName.replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase();
         }
 
         // Handle Prefix (DC for Invoice/PO, Q for Quotation, P for Proforma)
-        const prefixBase = docType === 'quotation' ? 'Q' : docType === 'proforma' ? 'P' : 'DC';
+        const prefixBase = currentDocType === 'quotation' ? 'Q' : currentDocType === 'proforma' ? 'P' : 'DC';
         const fyPrefix = `${prefixBase}.${code}.${fyStr}.`;
 
         // Fetch all invoices for THIS financial year to find the maximum sequence
