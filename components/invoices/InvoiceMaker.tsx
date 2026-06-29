@@ -102,6 +102,26 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
     const [isAddCompanyModalOpen, setIsAddCompanyModalOpen] = useState(false);
     const [lastSelectedType, setLastSelectedType] = useState<'issuer' | 'receiver' | 'supplier' | null>(null);
 
+    const [pendingAiData, setPendingAiData] = useState<any>(null);
+    const [templatesLoaded, setTemplatesLoaded] = useState(false);
+    const [isReadyToApply, setIsReadyToApply] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setIsReadyToApply(true), 1500);
+        if (templatesLoaded && companyProfiles.length > 0 && priceList.length > 0) {
+            setIsReadyToApply(true);
+            clearTimeout(timer);
+        }
+        return () => clearTimeout(timer);
+    }, [templatesLoaded, companyProfiles, priceList]);
+
+    useEffect(() => {
+        if (pendingAiData && isReadyToApply) {
+            handleApplyAiData(pendingAiData);
+            setPendingAiData(null);
+        }
+    }, [pendingAiData, isReadyToApply]);
+
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
             if (event.data.type === 'COMPANY_ADDED') {
@@ -227,10 +247,9 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
 
             // Hydrate from Slack AI payload if present
             if ((initialData.invoice_metadata as any)?.slack_ai_payload) {
-                setTimeout(() => handleApplyAiData((initialData.invoice_metadata as any).slack_ai_payload), 500);
+                setPendingAiData((initialData.invoice_metadata as any).slack_ai_payload);
             }
         }
-        fetchTemplates();
     }, [initialData]);
 
     const handleApplyAiData = (data: any) => {
@@ -241,8 +260,8 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
             setDocType(data.document_type);
             setCustomTitle(data.document_type === 'invoice' ? 'INVOICE' : data.document_type === 'po' ? 'PURCHASE ORDER' : data.document_type === 'quotation' ? 'QUOTATION' : 'PROFORMA INVOICE');
         }
-        if (data.template_name && templates.length > 0) {
-            const tmpl = templates.find(t => t.name === data.template_name);
+        if (data.template_name) {
+            const tmpl = templates.find(t => t.name.toLowerCase() === data.template_name.toLowerCase());
             if (tmpl) {
                 setSelectedTemplateId(tmpl.id || '');
                 loadTemplate(tmpl);
@@ -286,32 +305,35 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                 return item;
             });
 
-            // Recalculate taxes for new items
-            const finalItems = newItems.map(item => {
-                const taxMode = getTaxMode(doc.issuer_details.gstin, doc.receiver_details.gstin, doc.invoice_metadata.tax_mode);
-                const taxRate = Number(item.igst_rate || 18);
-                const taxable = item.taxable_value || 0;
+            // Calculate taxes and apply to doc state using prev to avoid stale closures
+            setDoc(prev => {
+                const taxMode = getTaxMode(prev.issuer_details.gstin, prev.receiver_details.gstin, prev.invoice_metadata.tax_mode);
                 
-                if (taxMode === 'intra') {
-                    const halfRate = taxRate / 2;
-                    item.cgst_rate = halfRate;
-                    item.cgst_amount = taxable * (halfRate / 100);
-                    item.sgst_rate = halfRate;
-                    item.sgst_amount = taxable * (halfRate / 100);
-                    item.igst_amount = 0;
-                } else {
-                    item.igst_amount = taxable * (taxRate / 100);
-                    item.cgst_rate = 0; item.cgst_amount = 0; item.sgst_rate = 0; item.sgst_amount = 0;
-                }
-                item.total_value = taxable + (item.cgst_amount || 0) + (item.sgst_amount || 0) + (item.igst_amount || 0);
-                return item;
-            });
+                const finalItems = newItems.map(item => {
+                    const taxRate = Number(item.igst_rate || 18);
+                    const taxable = item.taxable_value || 0;
+                    
+                    if (taxMode === 'intra') {
+                        const halfRate = taxRate / 2;
+                        item.cgst_rate = halfRate;
+                        item.cgst_amount = taxable * (halfRate / 100);
+                        item.sgst_rate = halfRate;
+                        item.sgst_amount = taxable * (halfRate / 100);
+                        item.igst_amount = 0;
+                    } else {
+                        item.igst_amount = taxable * (taxRate / 100);
+                        item.cgst_rate = 0; item.cgst_amount = 0; item.sgst_rate = 0; item.sgst_amount = 0;
+                    }
+                    item.total_value = taxable + (item.cgst_amount || 0) + (item.sgst_amount || 0) + (item.igst_amount || 0);
+                    return item;
+                });
 
-            setDoc(prev => ({
-                ...prev,
-                items: finalItems,
-                totals: { ...prev.totals, ...recalculateInvoiceTotals(finalItems) }
-            }));
+                return {
+                    ...prev,
+                    items: finalItems,
+                    totals: { ...prev.totals, ...recalculateInvoiceTotals(finalItems) }
+                };
+            });
         }
 
         // 4. UI Options
@@ -343,7 +365,15 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
         setAmountInWordsStr(amountToWords(doc.totals.grand_total || 0, doc.totals.currency));
     }, [doc.totals.grand_total, doc.totals.currency]);
 
-    const fetchTemplates = async () => { const { data } = await supabase.from('invoice_templates').select('*'); if (data) setTemplates(data); };
+    const fetchTemplates = async () => { 
+        const { data } = await supabase.from('invoice_templates').select('*'); 
+        if (data) setTemplates(data); 
+        setTemplatesLoaded(true);
+    };
+
+    useEffect(() => {
+        fetchTemplates();
+    }, []);
 
     const saveTemplate = async () => {
         if (!templateName) return alert("Enter template name");
