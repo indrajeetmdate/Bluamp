@@ -140,7 +140,7 @@ async function processInvoice(userText: string, responseUrl: string) {
           totals: { subtotal_taxable: 0, cgst_total: 0, sgst_total: 0, igst_total: 0, grand_total: 0 }
         };
     
-        const { error } = await supabase.from('invoices').insert([draftPayload]).select().single();
+        const { data: dbData, error } = await supabase.from('invoices').insert([draftPayload]).select().single();
     
         if (error) {
           console.error('Supabase insert error:', error);
@@ -149,7 +149,7 @@ async function processInvoice(userText: string, responseUrl: string) {
         }
     
         const appUrl = process.env.VITE_APP_URL || 'https://inventory.cnergy.co.in';
-        const invoiceUrl = `${appUrl}/?view=finance_upload`; 
+        const invoiceUrl = `${appUrl}/?view=finance_maker&slack_draft=${dbData.id}`; 
     
         const slackResponse = {
           response_type: "in_channel",

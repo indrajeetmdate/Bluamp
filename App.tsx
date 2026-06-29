@@ -19,8 +19,8 @@ import StorageManager from './components/RackSearch';
 import PublicStorageViewer from './components/PublicStorageViewer'; // New Import
 import Footer from './components/Footer';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { useSessionStorage } from './hooks/useSessionStorage';
 import { useSupabase } from './hooks/useSupabase';
+import { supabase } from './supabaseClient';
 import type { ReceivedGood, Recipe, WIPItem, FinishedGood, RepairItem, User, LogEntry, TestResult, CompanyProfile, ExtractedInvoice, View, StorageRoom, StorageUnit, StorageItem, SupplyRecord } from './types';
 import { DUMMY_RECEIVED_GOODS, DUMMY_RECIPES, DUMMY_WIP_ITEMS, DUMMY_FINISHED_GOODS, DUMMY_COMPANY_PROFILES } from './dummyData';
 
@@ -30,11 +30,14 @@ const App: React.FC = () => {
   const publicUnitId = searchParams.get('public_storage');
   const mode = searchParams.get('mode');
 
-  const [view, setView] = useState<View>('received'); 
+  const [view, setView] = useState<View>(() => {
+      const v = searchParams.get('view');
+      return v ? (v as View) : 'received';
+  }); 
   
   // Auth state
   const [users, setUsers] = useSupabase<User>('app_users', [], 'username');
-  const [currentUser, setCurrentUser] = useSessionStorage<User | null>('currentUser', null);
+  const [currentUser, setCurrentUser] = useLocalStorage<User | null>('currentUser', null);
 
   // App data state - synchronized with Supabase
   const [receivedGoods, setReceivedGoods] = useSupabase<ReceivedGood>('received_goods', DUMMY_RECEIVED_GOODS);
@@ -57,6 +60,20 @@ const App: React.FC = () => {
 
   // State for transferring data from Testing to WIP (Start Production)
   const [productionDraft, setProductionDraft] = useState<{ receivedGoodId: string; serials: string[] } | null>(null);
+
+  // Parse Slack Deep Link
+  useEffect(() => {
+      const draftId = searchParams.get('slack_draft');
+      if (draftId && currentUser) {
+          const fetchDraft = async () => {
+              const { data, error } = await supabase.from('invoices').select('*').eq('id', draftId).single();
+              if (data && !error) {
+                  setInvoiceDraft(data as ExtractedInvoice);
+              }
+          };
+          fetchDraft();
+      }
+  }, [currentUser]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
