@@ -1,8 +1,28 @@
 import nodemailer from 'nodemailer';
 
+// Shared secret for authenticating internal API calls
+// Set MAIL_API_SECRET in Vercel env vars. Frontend sends it as x-api-secret header.
+const MAIL_API_SECRET = process.env.MAIL_API_SECRET || '';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
+  }
+
+  // Security: Verify the request is from our own app
+  // If MAIL_API_SECRET is configured, require it. If not set (legacy), check Referer as fallback.
+  if (MAIL_API_SECRET) {
+    const clientSecret = req.headers['x-api-secret'];
+    if (clientSecret !== MAIL_API_SECRET) {
+      return res.status(403).json({ message: 'Forbidden: Invalid API secret' });
+    }
+  } else {
+    // Fallback: Check Referer/Origin to at least block non-browser abuse
+    const origin = req.headers['origin'] || req.headers['referer'] || '';
+    const allowedOrigins = ['https://inventory.cnergy.co.in', 'http://localhost:3000', 'http://localhost:5173'];
+    if (!allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+      return res.status(403).json({ message: 'Forbidden: Unauthorized origin' });
+    }
   }
 
   const { to, subject, html, attachmentBase64, attachmentName } = req.body;

@@ -96,26 +96,23 @@ const App: React.FC = () => {
         // Wait for sync
     }
 
+    // Ensure admin role is preserved — password is managed in the database only
     setUsers(prevUsers => {
-        const adminUser: User = {
-            username: 'datlioncnergy@gmail.com',
-            password: 'thisisbusiness',
-            role: 'admin',
-        };
-
+        const ADMIN_USERNAME = 'datlioncnergy@gmail.com';
         const existingUsers = [...prevUsers];
-        const adminIndex = existingUsers.findIndex(u => u.username === adminUser.username);
+        const adminIndex = existingUsers.findIndex(u => u.username === ADMIN_USERNAME);
 
         if (adminIndex !== -1) {
-            if (JSON.stringify(existingUsers[adminIndex]) !== JSON.stringify({ ...existingUsers[adminIndex], ...adminUser })) {
-                 existingUsers[adminIndex] = { ...existingUsers[adminIndex], ...adminUser };
-                 return existingUsers;
+            // Ensure admin role is always set (don't touch password)
+            if (existingUsers[adminIndex].role !== 'admin') {
+                existingUsers[adminIndex] = { ...existingUsers[adminIndex], role: 'admin' };
+                return existingUsers;
             }
             return prevUsers;
-        } else {
-            existingUsers.push(adminUser);
-            return existingUsers;
         }
+        // If admin user doesn't exist at all (first-time setup), it should be seeded via SQL.
+        // Don't create from client-side code.
+        return prevUsers;
     });
   }, [setUsers, users]); 
 
