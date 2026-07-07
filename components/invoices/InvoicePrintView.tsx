@@ -247,7 +247,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, invoices, 
                                 {(singleCopy ? [''] : ['ORIGINAL FOR RECIPIENT', 'DUPLICATE FOR TRANSPORTER']).map((copyLabel, copyIdx) => (
                                     <React.Fragment key={copyIdx}>
                                         {paginatedPages.map((pageItems, pageIdx) => {
-                                            const taxMode = getTaxMode(doc.issuer_details.gstin, doc.receiver_details.gstin, doc.invoice_metadata.tax_mode);
+                                            const taxMode = getTaxMode(doc.issuer_details?.gstin, doc.receiver_details?.gstin, doc.invoice_metadata?.tax_mode);
                                             const actualShippedTo = doc.shipped_to_details || (doc.invoice_metadata as any)?.shipped_to_details;
                                             return (
                                                 <div className="invoice-print-page bg-white shadow-xl mx-auto mb-8 w-[210mm] min-h-[296mm] p-8 flex flex-col relative" key={`${copyIdx}-${pageIdx}`}>
