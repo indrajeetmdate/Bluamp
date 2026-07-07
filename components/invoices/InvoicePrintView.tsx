@@ -16,11 +16,12 @@ interface InvoicePrintViewProps {
     onMailSent?: () => void;
     onError?: (err: Error) => void;
     singleCopy?: boolean;
+    hiddenRender?: boolean;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, autoMailTarget, onMailSent, onError, singleCopy = false }) => {
+const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, autoMailTarget, onMailSent, onError, singleCopy = false, hiddenRender = false }) => {
     const [logo, setLogo] = useState<string | null>(null);
     const [stamp, setStamp] = useState<string | null>(null);
     const [signature, setSignature] = useState<string | null>(null);
@@ -196,7 +197,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, a
     };
 
     const overlayContent = (
-        <div id="invoice-print-overlay" className={`fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex flex-col h-full ${autoMailTarget ? 'opacity-0 pointer-events-none' : 'animate-fade-in'}`}>
+        <div id="invoice-print-overlay" className={`fixed z-[200] bg-black/60 backdrop-blur-sm flex flex-col h-full ${(autoMailTarget || hiddenRender) ? 'left-[200vw] top-0 w-[100vw] pointer-events-none' : 'inset-0 animate-fade-in'}`}>
             <style>{`
                 @media print {
                     body > *:not(#invoice-print-overlay) { display: none !important; }
@@ -222,6 +223,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, a
                 }
             `}</style>
                 {/* Toolbar */}
+                {!hiddenRender && (
                 <div className="print-toolbar bg-white border-b px-6 py-3 flex items-center justify-between flex-shrink-0">
                     <div>
                         <h3 className="font-bold text-lg text-slate-900">Invoice Preview</h3>
@@ -236,6 +238,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, a
                         </button>
                     </div>
                 </div>
+                )}
 
                 {/* Scrollable preview */}
                 <div className="print-scroll-area flex-1 overflow-y-auto bg-slate-200 p-8" ref={printRef}>

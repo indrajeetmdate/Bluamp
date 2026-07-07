@@ -680,7 +680,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
                                         </tr>
                                         {expandedRowId === inv.id && (
                                             <tr className="bg-slate-50 animate-fade-in">
-                                                <td colSpan={8} className="p-6 border-b border-[#A8BF75]/20">
+                                                <td colSpan={9} className="p-6 border-b border-[#A8BF75]/20">
                                                     <div className="grid md:grid-cols-2 gap-8">
                                                         <div>
                                                             <h4 className="text-xs font-black text-[#658C3E] uppercase tracking-widest mb-4">Line Items</h4>
@@ -758,7 +758,7 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
 
             {/* Hidden render for bulk download - single copy, no labels */}
             {printInvoice && bulkDownloading && (
-                <InvoicePrintView invoice={printInvoice} onClose={() => {}} singleCopy={true} />
+                <InvoicePrintView invoice={printInvoice} onClose={() => {}} singleCopy={true} hiddenRender={true} />
             )}
             
             {autoMailInvoice && (
