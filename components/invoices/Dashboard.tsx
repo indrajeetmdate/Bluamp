@@ -3,11 +3,13 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { ExtractedInvoice } from '../../types';
 import { generateCSV, generateCompanyProfileCSV, downloadFile, safeRender } from '../../utils/invoiceUtils';
-import { FileSpreadsheet, FileJson, Loader2, RefreshCw, Search, FileText, Plus, X, Building, ChevronDown, ChevronUp, Trash2, Download, Mail, CheckCircle } from './Icons';
+import { FileSpreadsheet, FileJson, Loader2, RefreshCw, Search, FileText, Plus, X, Building, ChevronDown, ChevronUp, Trash2, Download, Mail, CheckCircle, Square, CheckSquare, MinusSquare } from './Icons';
 import { ImportIcon } from '../icons/ImportIcon';
 import { PencilIcon } from '../icons/PencilIcon';
 import Modal from '../Modal';
 import InvoicePrintView from './InvoicePrintView';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 interface NoteModalProps {
     isOpen: boolean;
@@ -200,6 +202,75 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
     const [printInvoice, setPrintInvoice] = useState<ExtractedInvoice | null>(null);
     const [sendingMailId, setSendingMailId] = useState<string | null>(null);
     const [autoMailInvoice, setAutoMailInvoice] = useState<{inv: ExtractedInvoice, targetEmail: string} | null>(null);
+
+    // Bulk selection state
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [bulkDownloading, setBulkDownloading] = useState(false);
+    const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
+
+    const toggleSelect = (id: string) => {
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === invoices.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(invoices.map(inv => inv.id as string)));
+        }
+    };
+
+    const handleBulkDownload = async () => {
+        const selected = invoices.filter(inv => selectedIds.has(inv.id as string));
+        if (selected.length === 0) return;
+
+        setBulkDownloading(true);
+        setBulkProgress({ current: 0, total: selected.length });
+
+        for (let i = 0; i < selected.length; i++) {
+            const inv = selected[i];
+            setBulkProgress({ current: i + 1, total: selected.length });
+
+            // Open the print view silently for each invoice and download
+            setPrintInvoice(inv);
+            // Give InvoicePrintView time to render
+            await new Promise(resolve => setTimeout(resolve, 800));
+
+            try {
+                const container = document.querySelector('#invoice-print-overlay .invoice-print-container');
+                if (!container) {
+                    console.warn(`Could not find print container for invoice ${inv.invoice_metadata?.invoice_number}`);
+                    continue;
+                }
+
+                const invNumber = inv.invoice_metadata?.invoice_number || `invoice_${i + 1}`;
+                const filename = `${invNumber.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+
+                const opt = {
+                    margin: 0,
+                    filename,
+                    image: { type: 'jpeg' as const, quality: 0.95 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+                    pagebreak: { mode: 'css', elements: '.invoice-print-page' }
+                };
+
+                await html2pdf().set(opt).from(container).save();
+                // Small delay between downloads so browser doesn't choke
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (err) {
+                console.error(`Failed to download invoice ${inv.invoice_metadata?.invoice_number}:`, err);
+            }
+        }
+
+        setPrintInvoice(null);
+        setBulkDownloading(false);
+        setBulkProgress({ current: 0, total: 0 });
+    };
 
     const handleSendMail = async (inv: ExtractedInvoice) => {
         // Handle POs where the other party might be in supplier_details
@@ -556,6 +627,11 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
                     <table className="w-full text-left text-sm text-slate-600">
                         <thead className="bg-slate-50 text-[#0D0D0D] font-bold border-b border-slate-200">
                             <tr>
+                                <th className="p-4 w-10">
+                                    <button onClick={toggleSelectAll} className="text-slate-400 hover:text-[#8EBF45] transition-colors" title={selectedIds.size === invoices.length ? "Deselect All" : "Select All"}>
+                                        {invoices.length > 0 && selectedIds.size === invoices.length ? <CheckSquare size={18} className="text-[#8EBF45]" /> : selectedIds.size > 0 ? <MinusSquare size={18} className="text-[#8EBF45]" /> : <Square size={18} />}
+                                    </button>
+                                </th>
                                 <th className="p-4 w-10"></th>
                                 <th className="p-4">Date</th>
                                 <th className="p-4">Issuer</th>
@@ -568,15 +644,18 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
-                                <tr><td colSpan={8} className="p-8 text-center text-slate-400"><Loader2 className="animate-spin mx-auto mb-2 text-[#8EBF45]" /> Loading data...</td></tr>
+                                <tr><td colSpan={9} className="p-8 text-center text-slate-400"><Loader2 className="animate-spin mx-auto mb-2 text-[#8EBF45]" /> Loading data...</td></tr>
                             ) : errorMsg ? (
-                                <tr><td colSpan={8} className="p-8 text-center text-red-500">Error: {errorMsg}</td></tr>
+                                <tr><td colSpan={9} className="p-8 text-center text-red-500">Error: {errorMsg}</td></tr>
                             ) : invoices.length === 0 ? (
-                                <tr><td colSpan={8} className="p-8 text-center text-slate-400">No {invoiceType} invoices found matching filters.</td></tr>
+                                <tr><td colSpan={9} className="p-8 text-center text-slate-400">No {invoiceType} invoices found matching filters.</td></tr>
                             ) : (
                                 invoices.map((inv) => (
                                     <React.Fragment key={inv.id}>
-                                        <tr className={`hover:bg-slate-50 transition-colors group cursor-pointer ${expandedRowId === inv.id ? 'bg-[#8EBF45]/5' : ''}`} onClick={() => toggleRow(inv.id)}>
+                                        <tr className={`hover:bg-slate-50 transition-colors group cursor-pointer ${expandedRowId === inv.id ? 'bg-[#8EBF45]/5' : ''} ${selectedIds.has(inv.id as string) ? 'bg-indigo-50/50' : ''}`} onClick={() => toggleRow(inv.id)}>
+                                            <td className="p-4" onClick={(e) => { e.stopPropagation(); toggleSelect(inv.id as string); }}>
+                                                {selectedIds.has(inv.id as string) ? <CheckSquare size={18} className="text-[#8EBF45]" /> : <Square size={18} className="text-slate-300 group-hover:text-slate-400" />}
+                                            </td>
                                             <td className="p-4 text-slate-400">{expandedRowId === inv.id ? <ChevronUp size={16} className="text-[#8EBF45]" /> : <ChevronDown size={16} />}</td>
                                             <td className="p-4 text-slate-500 whitespace-nowrap">{safeRender(inv.invoice_metadata?.invoice_date) || (inv.created_at ? new Date(inv.created_at).toLocaleDateString() : 'N/A')}</td>
                                             <td className="p-4 font-bold text-[#0D0D0D]">{safeRender(inv.issuer_details?.name) || 'Unknown'}</td>
@@ -650,9 +729,36 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
                 </div>
             </div>
 
+            {/* Floating Bulk Action Bar */}
+            {selectedIds.size > 0 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#0D0D0D] text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-4 animate-fade-in">
+                    <span className="text-sm font-bold">{selectedIds.size} invoice{selectedIds.size > 1 ? 's' : ''} selected</span>
+                    <div className="w-px h-6 bg-white/20"></div>
+                    <button
+                        onClick={handleBulkDownload}
+                        disabled={bulkDownloading}
+                        className="bg-[#8EBF45] text-[#0D0D0D] px-4 py-1.5 rounded-lg text-sm font-black uppercase tracking-wider flex items-center gap-2 hover:bg-[#A8BF75] transition-colors disabled:opacity-50"
+                    >
+                        {bulkDownloading ? (
+                            <><Loader2 size={14} className="animate-spin" /> Downloading {bulkProgress.current}/{bulkProgress.total}...</>
+                        ) : (
+                            <><Download size={14} /> Download All PDFs</>
+                        )}
+                    </button>
+                    <button onClick={() => setSelectedIds(new Set())} className="text-slate-400 hover:text-white p-1 rounded transition-colors" title="Clear Selection">
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
+
             {/* Invoice Print Preview Overlay */}
-            {printInvoice && (
+            {printInvoice && !bulkDownloading && (
                 <InvoicePrintView invoice={printInvoice} onClose={() => setPrintInvoice(null)} />
+            )}
+
+            {/* Hidden render for bulk download - single copy, no labels */}
+            {printInvoice && bulkDownloading && (
+                <InvoicePrintView invoice={printInvoice} onClose={() => {}} singleCopy={true} />
             )}
             
             {autoMailInvoice && (

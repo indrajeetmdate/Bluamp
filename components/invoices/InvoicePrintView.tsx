@@ -15,11 +15,12 @@ interface InvoicePrintViewProps {
     autoMailTarget?: string | null;
     onMailSent?: () => void;
     onError?: (err: Error) => void;
+    singleCopy?: boolean;
 }
 
 const ITEMS_PER_PAGE = 10;
 
-const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, autoMailTarget, onMailSent, onError }) => {
+const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, autoMailTarget, onMailSent, onError, singleCopy = false }) => {
     const [logo, setLogo] = useState<string | null>(null);
     const [stamp, setStamp] = useState<string | null>(null);
     const [signature, setSignature] = useState<string | null>(null);
@@ -239,11 +240,11 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, a
                 {/* Scrollable preview */}
                 <div className="print-scroll-area flex-1 overflow-y-auto bg-slate-200 p-8" ref={printRef}>
                     <div className={`mx-auto ${config.font} invoice-print-container`}>
-                        {['ORIGINAL FOR RECIPIENT', 'DUPLICATE FOR TRANSPORTER'].map((copyLabel, copyIdx) => (
+                        {(singleCopy ? [''] : ['ORIGINAL FOR RECIPIENT', 'DUPLICATE FOR TRANSPORTER']).map((copyLabel, copyIdx) => (
                             <React.Fragment key={copyIdx}>
                                 {paginatedPages.map((pageItems, pageIdx) => (
                                     <div className="invoice-print-page bg-white shadow-xl mx-auto mb-8 w-[210mm] min-h-[297mm] p-8 flex flex-col relative" key={`${copyIdx}-${pageIdx}`}>
-                                        <div className="absolute top-4 right-8 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{copyLabel}</div>
+                                        {copyLabel && <div className="absolute top-4 right-8 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{copyLabel}</div>}
                                         {/* HEADER */}
                                         <div className="flex justify-between items-start mt-4 mb-3 border-b pb-3">
                                             <div className="flex items-start gap-4 flex-1">

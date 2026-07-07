@@ -105,6 +105,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
     const [templateName, setTemplateName] = useState('');
     const [selectedTemplateId, setSelectedTemplateId] = useState('');
     const [amountInWordsStr, setAmountInWordsStr] = useState('');
+    const [printMode, setPrintMode] = useState<'single' | 'dual'>('dual');
 
     // Smart Pricing autocomplete state
     const [priceDropdownIdx, setPriceDropdownIdx] = useState<number | null>(null);
@@ -1327,6 +1328,21 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
                         <button onClick={handlePrint} className="flex-1 bg-[#0D0D0D] text-white py-2 rounded shadow hover:bg-[#404040] flex items-center justify-center gap-2 text-sm font-bold uppercase tracking-wide"><Printer size={16} /> Print</button>
                         <button onClick={handlePrint} className="flex-1 bg-[#8EBF45] text-[#0D0D0D] py-2 rounded shadow hover:bg-[#658C3E] hover:text-white flex items-center justify-center gap-2 text-sm font-bold uppercase tracking-wide"><Download size={16} /> PDF</button>
                     </div>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-slate-500 font-semibold">Copies:</span>
+                        <button
+                            onClick={() => setPrintMode('single')}
+                            className={`text-xs px-3 py-1 rounded-full border transition-all ${printMode === 'single' ? 'bg-[#8EBF45]/20 text-[#658C3E] border-[#8EBF45] font-bold' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'}`}
+                        >
+                            Single Copy
+                        </button>
+                        <button
+                            onClick={() => setPrintMode('dual')}
+                            className={`text-xs px-3 py-1 rounded-full border transition-all ${printMode === 'dual' ? 'bg-[#8EBF45]/20 text-[#658C3E] border-[#8EBF45] font-bold' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'}`}
+                        >
+                            Dual (Original + Duplicate)
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1706,13 +1722,13 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
 
                     {/* === PRINT-ONLY PAGINATED VIEW === */}
                     <div className="print-only" style={{ display: 'none' }}>
-                        {['ORIGINAL FOR RECIPIENT', 'DUPLICATE FOR TRANSPORTER'].map((copyLabel, copyIdx) => (
+                        {(printMode === 'single' ? [''] : ['ORIGINAL FOR RECIPIENT', 'DUPLICATE FOR TRANSPORTER']).map((copyLabel, copyIdx) => (
                             <React.Fragment key={copyIdx}>
                                 {paginatedPages.map((pageItems, pageIdx) => {
                                     const taxMode = getTaxMode(doc.issuer_details.gstin, doc.receiver_details.gstin, doc.invoice_metadata.tax_mode);
                                     return (
                                         <div className="invoice-page relative" key={`${copyIdx}-${pageIdx}`}>
-                                            <div className="absolute top-0 right-0 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{copyLabel}</div>
+                                            {copyLabel && <div className="absolute top-0 right-0 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{copyLabel}</div>}
                                             {/* ---- PAGE HEADER ---- */}
                                             <div className="flex justify-between items-start mt-4 mb-3 border-b pb-3">
                                         <div className="flex items-start gap-4 flex-1">
