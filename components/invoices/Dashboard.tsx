@@ -208,6 +208,8 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
     const [bulkDownloading, setBulkDownloading] = useState(false);
     const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0 });
 
+    const [bulkInvoices, setBulkInvoices] = useState<ExtractedInvoice[] | null>(null);
+
     const toggleSelect = (id: string) => {
         setSelectedIds(prev => {
             const next = new Set(prev);
@@ -230,44 +232,35 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
 
         setBulkDownloading(true);
         setBulkProgress({ current: 0, total: selected.length });
+        setBulkInvoices(selected);
+        
+        // Give InvoicePrintView time to render all invoices
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
-        for (let i = 0; i < selected.length; i++) {
-            const inv = selected[i];
-            setBulkProgress({ current: i + 1, total: selected.length });
-
-            // Open the print view silently for each invoice and download
-            setPrintInvoice(inv);
-            // Give InvoicePrintView time to render
-            await new Promise(resolve => setTimeout(resolve, 800));
-
-            try {
-                const container = document.querySelector('#invoice-print-overlay .invoice-print-container');
-                if (!container) {
-                    console.warn(`Could not find print container for invoice ${inv.invoice_metadata?.invoice_number}`);
-                    continue;
-                }
-
-                const invNumber = inv.invoice_metadata?.invoice_number || `invoice_${i + 1}`;
-                const filename = `${invNumber.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
-
-                const opt = {
-                    margin: 0,
-                    filename,
-                    image: { type: 'jpeg' as const, quality: 0.95 },
-                    html2canvas: { scale: 2, useCORS: true },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
-                    pagebreak: { mode: 'css', elements: '.invoice-print-page' }
-                };
-
-                await html2pdf().set(opt).from(container).save();
-                // Small delay between downloads so browser doesn't choke
-                await new Promise(resolve => setTimeout(resolve, 500));
-            } catch (err) {
-                console.error(`Failed to download invoice ${inv.invoice_metadata?.invoice_number}:`, err);
+        try {
+            const container = document.querySelector('#invoice-print-overlay .invoice-print-container');
+            if (!container) {
+                console.warn(`Could not find print container for bulk download`);
+                throw new Error("Print container not found");
             }
+
+            const filename = `Bulk_Invoices_${new Date().toISOString().split('T')[0]}.pdf`;
+
+            const opt = {
+                margin: 0,
+                filename,
+                image: { type: 'jpeg' as const, quality: 0.95 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+                pagebreak: { mode: 'css' }
+            };
+
+            await html2pdf().set(opt).from(container).save();
+        } catch (err) {
+            console.error(`Failed to generate bulk PDF:`, err);
         }
 
-        setPrintInvoice(null);
+        setBulkInvoices(null);
         setBulkDownloading(false);
         setBulkProgress({ current: 0, total: 0 });
     };
@@ -757,8 +750,8 @@ const Dashboard: React.FC<DashboardProps> = ({ currentUser, setView, onEditInvoi
             )}
 
             {/* Hidden render for bulk download - single copy, no labels */}
-            {printInvoice && bulkDownloading && (
-                <InvoicePrintView invoice={printInvoice} onClose={() => {}} singleCopy={true} hiddenRender={true} />
+            {bulkInvoices && bulkDownloading && (
+                <InvoicePrintView invoice={bulkInvoices[0]} invoices={bulkInvoices} onClose={() => {}} singleCopy={true} hiddenRender={true} />
             )}
             
             {autoMailInvoice && (

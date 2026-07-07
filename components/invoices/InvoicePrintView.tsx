@@ -11,6 +11,7 @@ import html2pdf from 'html2pdf.js';
 
 interface InvoicePrintViewProps {
     invoice: ExtractedInvoice;
+    invoices?: ExtractedInvoice[];
     onClose: () => void;
     autoMailTarget?: string | null;
     onMailSent?: () => void;
@@ -21,7 +22,7 @@ interface InvoicePrintViewProps {
 
 const ITEMS_PER_PAGE = 10;
 
-const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, autoMailTarget, onMailSent, onError, singleCopy = false, hiddenRender = false }) => {
+const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, invoices, onClose, autoMailTarget, onMailSent, onError, singleCopy = false, hiddenRender = false }) => {
     const [logo, setLogo] = useState<string | null>(null);
     const [stamp, setStamp] = useState<string | null>(null);
     const [signature, setSignature] = useState<string | null>(null);
@@ -164,7 +165,18 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, a
         }
     };
 
-    const doc = invoice;
+    const docsToRender = invoices || [invoice];
+    const docsWithPages = docsToRender.map(d => {
+        const pages: InvoiceItem[][] = [];
+        const it = d.items || [];
+        for (let i = 0; i < it.length; i += ITEMS_PER_PAGE) {
+            pages.push(it.slice(i, i + ITEMS_PER_PAGE));
+        }
+        if (pages.length === 0) pages.push([]);
+        return { doc: d, paginatedPages: pages };
+    });
+
+    const doc = docsToRender[0];
     const docType = doc.document_type || 'invoice';
     const customTitle = docType === 'generated_po' ? 'PURCHASE ORDER' : docType === 'generated_quotation' ? 'QUOTATION' : docType === 'generated_proforma_invoice' ? 'PROFORMA INVOICE' : 'INVOICE';
     const amountInWordsStr = amountToWords(doc.totals?.grand_total || 0, doc.totals?.currency);
@@ -176,19 +188,6 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, a
         try { return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
         catch { return dateStr; }
     };
-
-    // Paginate items
-    const items = doc.items || [];
-    const paginatedPages: InvoiceItem[][] = [];
-    if (items.length === 0) {
-        paginatedPages.push([]);
-    } else {
-        for (let i = 0; i < items.length; i += ITEMS_PER_PAGE) {
-            paginatedPages.push(items.slice(i, i + ITEMS_PER_PAGE));
-        }
-    }
-
-
 
     const actualShippedTo = doc.shipped_to_details || (doc.invoice_metadata as any)?.shipped_to_details;
 
@@ -208,8 +207,8 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, a
                     .invoice-print-page {
                         page-break-after: always;
                         width: 210mm;
-                        min-height: 297mm;
-                        max-height: 297mm;
+                        min-height: 296mm;
+                        max-height: 296mm;
                         padding: 8mm;
                         box-sizing: border-box;
                         position: relative;
@@ -243,13 +242,18 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, onClose, a
                 {/* Scrollable preview */}
                 <div className="print-scroll-area flex-1 overflow-y-auto bg-slate-200 p-8" ref={printRef}>
                     <div className={`mx-auto ${config.font} invoice-print-container`}>
-                        {(singleCopy ? [''] : ['ORIGINAL FOR RECIPIENT', 'DUPLICATE FOR TRANSPORTER']).map((copyLabel, copyIdx) => (
-                            <React.Fragment key={copyIdx}>
-                                {paginatedPages.map((pageItems, pageIdx) => (
-                                    <div className="invoice-print-page bg-white shadow-xl mx-auto mb-8 w-[210mm] min-h-[297mm] p-8 flex flex-col relative" key={`${copyIdx}-${pageIdx}`}>
-                                        {copyLabel && <div className="absolute top-4 right-8 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{copyLabel}</div>}
-                                        {/* HEADER */}
-                                        <div className="flex justify-between items-start mt-4 mb-3 border-b pb-3">
+                        {docsWithPages.map(({ doc, paginatedPages }, docIdx) => (
+                            <React.Fragment key={docIdx}>
+                                {(singleCopy ? [''] : ['ORIGINAL FOR RECIPIENT', 'DUPLICATE FOR TRANSPORTER']).map((copyLabel, copyIdx) => (
+                                    <React.Fragment key={copyIdx}>
+                                        {paginatedPages.map((pageItems, pageIdx) => {
+                                            const taxMode = getTaxMode(doc.issuer_details.gstin, doc.receiver_details.gstin, doc.invoice_metadata.tax_mode);
+                                            const actualShippedTo = doc.shipped_to_details || (doc.invoice_metadata as any)?.shipped_to_details;
+                                            return (
+                                                <div className="invoice-print-page bg-white shadow-xl mx-auto mb-8 w-[210mm] min-h-[296mm] p-8 flex flex-col relative" key={`${copyIdx}-${pageIdx}`}>
+                                                    {copyLabel && <div className="absolute top-4 right-8 text-[10px] font-bold text-slate-500 uppercase tracking-widest">{copyLabel}</div>}
+                                                    {/* HEADER */}
+                                                    <div className="flex justify-between items-start mt-4 mb-3 border-b pb-3">
                                             <div className="flex items-start gap-4 flex-1">
                                                 {logo ? <img src={logo} alt="Logo" className="w-auto object-contain" style={{ height: config.logoSize || 64 }} /> : <div className="w-16 h-16 bg-slate-100 rounded flex items-center justify-center text-slate-300 text-xs">Logo</div>}
                                                 <div className="flex-1">

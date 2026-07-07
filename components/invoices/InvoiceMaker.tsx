@@ -997,8 +997,8 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
                     .invoice-page {
                         page-break-after: always;
                         width: 210mm;
-                        min-height: 297mm;
-                        max-height: 297mm;
+                        min-height: 296mm;
+                        max-height: 296mm;
                         padding: 8mm;
                         box-sizing: border-box;
                         position: relative;
