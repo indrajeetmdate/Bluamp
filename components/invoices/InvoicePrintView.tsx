@@ -177,19 +177,12 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, invoices, 
     });
 
     const doc = docsToRender[0];
-    const docType = doc.document_type || 'invoice';
-    const customTitle = docType === 'generated_po' ? 'PURCHASE ORDER' : docType === 'generated_quotation' ? 'QUOTATION' : docType === 'generated_proforma_invoice' ? 'PROFORMA INVOICE' : 'INVOICE';
-    const amountInWordsStr = amountToWords(doc.totals?.grand_total || 0, doc.totals?.currency);
-    const taxMode = getTaxMode(doc.issuer_details?.gstin, doc.receiver_details?.gstin, doc.invoice_metadata?.tax_mode);
-    const currencySymbol = getCurrencySymbol(doc.totals?.currency);
 
     const formatPrintDate = (dateStr: string) => {
         if (!dateStr) return '';
         try { return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
         catch { return dateStr; }
     };
-
-    const actualShippedTo = doc.shipped_to_details || (doc.invoice_metadata as any)?.shipped_to_details;
 
     const handlePrint = () => {
         window.print();
@@ -242,9 +235,16 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, invoices, 
                 {/* Scrollable preview */}
                 <div className="print-scroll-area flex-1 overflow-y-auto bg-slate-200 p-8" ref={printRef}>
                     <div className={`mx-auto ${config.font} invoice-print-container`}>
-                        {docsWithPages.map(({ doc, paginatedPages }, docIdx) => (
-                            <React.Fragment key={docIdx}>
-                                {(singleCopy ? [''] : ['ORIGINAL FOR RECIPIENT', 'DUPLICATE FOR TRANSPORTER']).map((copyLabel, copyIdx) => (
+                        {docsWithPages.map(({ doc, paginatedPages }, docIdx) => {
+                            const docType = doc.document_type || 'invoice';
+                            const customTitle = docType === 'generated_po' ? 'PURCHASE ORDER' : docType === 'generated_quotation' ? 'QUOTATION' : docType === 'generated_proforma_invoice' ? 'PROFORMA INVOICE' : 'INVOICE';
+                            const amountInWordsStr = amountToWords(doc.totals?.grand_total || 0, doc.totals?.currency);
+                            const currencySymbol = getCurrencySymbol(doc.totals?.currency);
+                            const items = doc.items || [];
+
+                            return (
+                                <React.Fragment key={docIdx}>
+                                    {(singleCopy ? [''] : ['ORIGINAL FOR RECIPIENT', 'DUPLICATE FOR TRANSPORTER']).map((copyLabel, copyIdx) => (
                                     <React.Fragment key={copyIdx}>
                                         {paginatedPages.map((pageItems, pageIdx) => {
                                             const taxMode = getTaxMode(doc.issuer_details?.gstin, doc.receiver_details?.gstin, doc.invoice_metadata?.tax_mode);
@@ -466,7 +466,8 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, invoices, 
                                     </React.Fragment>
                                 ))}
                             </React.Fragment>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
         </div>
