@@ -11,7 +11,7 @@ import PriceList from './PriceList';
 import { extractInvoiceData } from '../../services/geminiService';
 import { extractInvoiceDataLocal, testOllamaConnection } from '../../services/ollamaService';
 import { extractInvoiceDataOpenRouter, testOpenRouterConnection } from '../../services/openrouterService';
-import { ExtractedInvoice, EMPTY_INVOICE, User, CompanyProfile, PriceListItem } from '../../types';
+import { ExtractedInvoice, EMPTY_INVOICE, User, CompanyProfile, PriceListItem, FinishedGood, Recipe } from '../../types';
 import { Loader2, Save, RotateCcw, AlertCircle, CheckCircle, SettingsIcon, CloudLightning, AlertTriangle, FileText, MessageSquare, Cpu } from './Icons';
 import { supabase } from '../../supabaseClient';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -46,9 +46,11 @@ interface InvoiceModuleProps {
     setInvoiceDraft?: (draft: ExtractedInvoice | null) => void;
     setView?: (view: any) => void;
     activeTab: ActiveTab;
+    finishedGoods?: FinishedGood[];
+    recipes?: Recipe[];
 }
 
-const InvoiceModule: React.FC<InvoiceModuleProps> = ({ currentUser, companyProfiles = [], invoiceDraft, activeTab, setView }) => {
+const InvoiceModule: React.FC<InvoiceModuleProps> = ({ currentUser, companyProfiles = [], invoiceDraft, activeTab, setView, finishedGoods = [], recipes = [] }) => {
     // Batch Queue State
     const [batchQueue, setBatchQueue] = useState<BatchJob[]>([]);
     const [activeJobId, setActiveJobId] = useState<string | null>(null); // Job currently being reviewed
@@ -425,7 +427,6 @@ const InvoiceModule: React.FC<InvoiceModuleProps> = ({ currentUser, companyProfi
                                                         <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Model Name</label>
                                                         <input className="w-full text-xs p-1.5 border rounded" value={openRouterModel} onChange={e => setOpenRouterModel(e.target.value)} />
                                                     </div>
-                                                    </div>
                                                     <button
                                                         onClick={async () => {
                                                             setIsTestingOpenRouter(true);
@@ -581,6 +582,8 @@ const InvoiceModule: React.FC<InvoiceModuleProps> = ({ currentUser, companyProfi
                     companyProfiles={companyProfiles}
                     initialData={invoiceDraft}
                     priceList={priceList}
+                    finishedGoods={finishedGoods}
+                    recipes={recipes}
                 />
             )}
 

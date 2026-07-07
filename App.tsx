@@ -269,6 +269,8 @@ const App: React.FC = () => {
             setInvoiceDraft={setInvoiceDraft}
             setView={setView}
             activeTab={tab}
+            finishedGoods={finishedGoods}
+            recipes={recipes}
         />;
     }
 

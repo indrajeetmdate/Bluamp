@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../../supabaseClient';
-import { ExtractedInvoice, InvoiceTemplate, EMPTY_INVOICE, InvoiceItem, CompanyProfile, BankDetails, PriceListItem } from '../../types';
+import { ExtractedInvoice, InvoiceTemplate, EMPTY_INVOICE, InvoiceItem, CompanyProfile, BankDetails, PriceListItem, FinishedGood, Recipe } from '../../types';
 import { recalculateInvoiceTotals, safeRender, amountToWords, getTaxMode, getCurrencySymbol } from '../../utils/invoiceUtils';
+import { generateUnitIds } from '../../utils';
 import { Save, Printer, Plus, Trash2, SettingsIcon, Columns, Wallet, Download, RefreshCw, ChevronUp, ChevronDown, Loader2, LayoutDashboard } from './Icons';
 import { QRCodeSVG } from 'qrcode.react';
 import { ImportIcon } from '../icons/ImportIcon';
@@ -14,6 +15,8 @@ interface InvoiceMakerProps {
     companyProfiles?: CompanyProfile[];
     initialData?: ExtractedInvoice | null;
     priceList?: PriceListItem[];
+    finishedGoods?: FinishedGood[];
+    recipes?: Recipe[];
 }
 
 // Extend config locally to support new UI flags without breaking shared types immediately
@@ -36,7 +39,7 @@ type ExtendedConfig = InvoiceTemplate['config'] & {
     shippedToLabel?: string;
 };
 
-const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfiles = [], initialData, priceList = [] }) => {
+const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, companyProfiles = [], initialData, priceList = [], finishedGoods = [], recipes = [] }) => {
     const [docType, setDocType] = useState<'invoice' | 'po' | 'quotation' | 'proforma'>('invoice');
     const [customTitle, setCustomTitle] = useState('INVOICE');
     const [doc, setDoc] = useState<ExtractedInvoice>(() => {
@@ -106,6 +109,26 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
     // Smart Pricing autocomplete state
     const [priceDropdownIdx, setPriceDropdownIdx] = useState<number | null>(null);
     const [priceSuggestions, setPriceSuggestions] = useState<PriceListItem[]>([]);
+    
+    // Serial Number Search State
+    const [serialSearchIdx, setSerialSearchIdx] = useState<number | null>(null);
+    const [serialSearchTerm, setSerialSearchTerm] = useState<string>('');
+
+    const allAvailableSerials = useMemo(() => {
+        const serials: { id: string, name: string, details: string }[] = [];
+        finishedGoods.forEach(fg => {
+            const unitIds = generateUnitIds(fg, finishedGoods, recipes);
+            unitIds.forEach(uid => {
+                if (!fg.dismantledUnitIds?.includes(uid) && !fg.unitDeliveries?.[uid]) {
+                    const recipeName = recipes.find(r => r.id === fg.recipeId)?.name || 'Unknown';
+                    const meta = fg.unitMetadata?.[uid];
+                    const details = meta?.voltage && meta?.capacity ? `${meta.voltage}V ${meta.capacity}Ah` : '';
+                    serials.push({ id: uid, name: recipeName, details });
+                }
+            });
+        });
+        return serials;
+    }, [finishedGoods, recipes]);
 
     // Iframe modal for adding company
     const [isAddCompanyModalOpen, setIsAddCompanyModalOpen] = useState(false);
@@ -158,22 +181,38 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
         }
     };
 
-    const handleDescriptionChange = (idx: number, value: string) => {
-        updateItem(idx, 'description', value);
-        if (value.length >= 2 && priceList.length > 0) {
-            const lower = value.toLowerCase();
-            const matches = priceList.filter(p => p.model_name.toLowerCase().includes(lower)).slice(0, 6);
-            if (matches.length > 0) {
-                setPriceDropdownIdx(idx);
-                setPriceSuggestions(matches);
-            } else {
-                setPriceDropdownIdx(null);
-                setPriceSuggestions([]);
-            }
+    const handleDescriptionChange = (idx: number, val: string) => {
+        updateItem(idx, 'description', val);
+
+        if (val.length < 2) {
+            setPriceDropdownIdx(null);
+            setPriceSuggestions([]);
+            return;
+        }
+
+        const matches = priceList.filter(p => p.model_name.toLowerCase().includes(val.toLowerCase()));
+        if (matches.length > 0) {
+            setPriceSuggestions(matches);
+            setPriceDropdownIdx(idx);
         } else {
             setPriceDropdownIdx(null);
             setPriceSuggestions([]);
         }
+    };
+
+    const handleAddSerial = (idx: number, serialId: string) => {
+        setDoc(prev => {
+            const newItems = [...prev.items];
+            const currentDesc = safeRender(newItems[idx].description);
+            if (currentDesc.includes(`S/N:`)) {
+                newItems[idx].description = currentDesc + `, ${serialId}`;
+            } else {
+                newItems[idx].description = currentDesc + (currentDesc ? `\n` : '') + `S/N: ${serialId}`;
+            }
+            return { ...prev, items: newItems };
+        });
+        setSerialSearchIdx(null);
+        setSerialSearchTerm('');
     };
 
     const handlePriceSelect = (idx: number, item: PriceListItem) => {
@@ -1424,8 +1463,49 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                     {(doc.items || []).map((item, idx) => (
                                         <tr key={idx} className="group">
                                             {visibleColumns.index && <td className="py-2 pl-2 text-slate-400">{idx + 1}</td>}
-                                            {visibleColumns.description && <td className="py-2 relative">
-                                                <input className="w-full bg-transparent outline-none font-medium text-slate-800" value={safeRender(item.description)} onChange={e => handleDescriptionChange(idx, e.target.value)} onBlur={() => setTimeout(() => { setPriceDropdownIdx(null); setPriceSuggestions([]); }, 150)} onFocus={() => { if (safeRender(item.description).length >= 2 && priceList.length > 0) handleDescriptionChange(idx, safeRender(item.description)); }} />
+                                            {visibleColumns.description && <td className="py-2 relative align-top">
+                                                <div className="flex flex-col">
+                                                    <textarea 
+                                                        className="w-full bg-transparent outline-none font-medium text-slate-800 resize-none overflow-hidden" 
+                                                        value={safeRender(item.description)} 
+                                                        onChange={e => handleDescriptionChange(idx, e.target.value)} 
+                                                        onBlur={() => setTimeout(() => { setPriceDropdownIdx(null); setPriceSuggestions([]); }, 150)} 
+                                                        onFocus={() => { if (safeRender(item.description).length >= 2 && priceList.length > 0) handleDescriptionChange(idx, safeRender(item.description)); }} 
+                                                        rows={Math.max(1, safeRender(item.description).split('\n').length)}
+                                                    />
+                                                    <div className="no-print mt-1">
+                                                        <button 
+                                                            onClick={() => { setSerialSearchIdx(serialSearchIdx === idx ? null : idx); setSerialSearchTerm(''); }} 
+                                                            className="text-[10px] text-blue-600 font-semibold uppercase hover:underline flex items-center"
+                                                        >
+                                                            + Add Serial
+                                                        </button>
+                                                        {serialSearchIdx === idx && (
+                                                            <div className="mt-1 relative">
+                                                                <input 
+                                                                    autoFocus 
+                                                                    className="w-full border border-slate-300 rounded px-2 py-1 text-xs outline-none focus:border-[#8EBF45] shadow-sm" 
+                                                                    placeholder="Search S/N..." 
+                                                                    value={serialSearchTerm} 
+                                                                    onChange={e => setSerialSearchTerm(e.target.value)} 
+                                                                />
+                                                                {serialSearchTerm.length > 0 && (
+                                                                    <div className="absolute left-0 top-full mt-1 w-[350px] bg-white border border-slate-200 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                                                                        {allAvailableSerials
+                                                                            .filter(s => s.id.toLowerCase().includes(serialSearchTerm.toLowerCase()) || s.name.toLowerCase().includes(serialSearchTerm.toLowerCase()))
+                                                                            .slice(0, 15)
+                                                                            .map(s => (
+                                                                                <div key={s.id} className="px-3 py-2 hover:bg-[#8EBF45]/10 cursor-pointer text-xs border-b border-slate-50 last:border-0 transition-colors" onClick={() => handleAddSerial(idx, s.id)}>
+                                                                                    <div className="font-mono text-slate-800 font-bold">{s.id}</div>
+                                                                                    <div className="text-slate-500 font-medium truncate">{s.name} {s.details && <span className="text-slate-400 bg-slate-100 px-1 rounded ml-1">{s.details}</span>}</div>
+                                                                                </div>
+                                                                            ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
                                                 {priceDropdownIdx === idx && priceSuggestions.length > 0 && (
                                                     <div className="absolute left-0 top-full z-50 w-80 bg-white border border-slate-200 rounded-lg shadow-xl mt-1 max-h-48 overflow-y-auto no-print" style={{ animation: 'fadeIn 0.1s ease-out' }}>
                                                         {priceSuggestions.map(p => (
@@ -1715,7 +1795,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, companyProfile
                                                     return (
                                                         <tr key={globalIdx}>
                                                             {visibleColumns.index && <td className="py-1.5 pl-2 text-slate-400">{globalIdx + 1}</td>}
-                                                            {visibleColumns.description && <td className="py-1.5 font-medium text-slate-800">{safeRender(item.description)}</td>}
+                                                            {visibleColumns.description && <td className="py-1.5 font-medium text-slate-800 whitespace-pre-wrap">{safeRender(item.description)}</td>}
                                                             {visibleColumns.hsn && <td className="py-1.5 text-slate-600 text-xs">{item.hsn_sac || '—'}</td>}
                                                             {visibleColumns.quantity && <td className="py-1.5 text-right">{item.quantity}</td>}
                                                             {visibleColumns.rate && <td className="py-1.5 text-right">{item.unit_price}</td>}
