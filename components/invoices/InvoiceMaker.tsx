@@ -207,7 +207,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
             if (currentDesc.includes(`S/N:`)) {
                 newItems[idx].description = currentDesc + `, ${serialId}`;
             } else {
-                newItems[idx].description = currentDesc + (currentDesc ? `\n` : '') + `S/N: ${serialId}`;
+                newItems[idx].description = currentDesc + (currentDesc ? ` - ` : '') + `S/N: ${serialId}`;
             }
             return { ...prev, items: newItems };
         });
@@ -1465,13 +1465,12 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
                                             {visibleColumns.index && <td className="py-2 pl-2 text-slate-400">{idx + 1}</td>}
                                             {visibleColumns.description && <td className="py-2 relative align-top">
                                                 <div className="flex flex-col">
-                                                    <textarea 
-                                                        className="w-full bg-transparent outline-none font-medium text-slate-800 resize-none overflow-hidden" 
+                                                    <input 
+                                                        className="w-full bg-transparent outline-none font-medium text-slate-800" 
                                                         value={safeRender(item.description)} 
                                                         onChange={e => handleDescriptionChange(idx, e.target.value)} 
                                                         onBlur={() => setTimeout(() => { setPriceDropdownIdx(null); setPriceSuggestions([]); }, 150)} 
                                                         onFocus={() => { if (safeRender(item.description).length >= 2 && priceList.length > 0) handleDescriptionChange(idx, safeRender(item.description)); }} 
-                                                        rows={Math.max(1, safeRender(item.description).split('\n').length)}
                                                     />
                                                     <div className="no-print mt-1">
                                                         <button 
@@ -1795,7 +1794,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
                                                     return (
                                                         <tr key={globalIdx}>
                                                             {visibleColumns.index && <td className="py-1.5 pl-2 text-slate-400">{globalIdx + 1}</td>}
-                                                            {visibleColumns.description && <td className="py-1.5 font-medium text-slate-800 whitespace-pre-wrap">{safeRender(item.description)}</td>}
+                                                            {visibleColumns.description && <td className="py-1.5 font-medium text-slate-800">{safeRender(item.description)}</td>}
                                                             {visibleColumns.hsn && <td className="py-1.5 text-slate-600 text-xs">{item.hsn_sac || '—'}</td>}
                                                             {visibleColumns.quantity && <td className="py-1.5 text-right">{item.quantity}</td>}
                                                             {visibleColumns.rate && <td className="py-1.5 text-right">{item.unit_price}</td>}
