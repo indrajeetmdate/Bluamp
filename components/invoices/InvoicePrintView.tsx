@@ -461,6 +461,9 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, invoices, 
                                 {/* FOOTER */}
                                 <div className="pt-1 text-center text-[9px] text-slate-400">{safeRender(config.footerText)}</div>
                             </div>
+                                            );
+                                        })}
+                                    </React.Fragment>
                                 ))}
                             </React.Fragment>
                         ))}
