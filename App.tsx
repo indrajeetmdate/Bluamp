@@ -66,9 +66,24 @@ const App: React.FC = () => {
       const draftId = searchParams.get('slack_draft');
       if (draftId && currentUser) {
           const fetchDraft = async () => {
-              const { data, error } = await supabase.from('invoices').select('*').eq('id', draftId).single();
-              if (data && !error) {
-                  setInvoiceDraft(data as ExtractedInvoice);
+              try {
+                  // Use serverless function to bypass RLS so basic users can view the draft
+                  const res = await fetch(`/api/get-shared-draft?id=${draftId}`);
+                  if (res.ok) {
+                      const data = await res.json();
+                      setInvoiceDraft(data as ExtractedInvoice);
+                  } else {
+                      // Fallback to direct supabase query (for admins or local testing)
+                      const { data, error } = await supabase.from('invoices').select('*').eq('id', draftId).single();
+                      if (data && !error) {
+                          setInvoiceDraft(data as ExtractedInvoice);
+                      }
+                  }
+              } catch (err) {
+                  const { data, error } = await supabase.from('invoices').select('*').eq('id', draftId).single();
+                  if (data && !error) {
+                      setInvoiceDraft(data as ExtractedInvoice);
+                  }
               }
           };
           fetchDraft();
