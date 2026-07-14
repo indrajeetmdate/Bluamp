@@ -145,12 +145,14 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
     const [isReadyToApply, setIsReadyToApply] = useState(false);
 
     useEffect(() => {
-        const timer = setTimeout(() => setIsReadyToApply(true), 1500);
+        let timer: any;
         if (templatesLoaded && companyProfiles.length > 0 && priceList.length > 0) {
             setIsReadyToApply(true);
-            clearTimeout(timer);
+        } else if (templatesLoaded) {
+            // Ensure templates are loaded before falling back to timer for empty company/price lists
+            timer = setTimeout(() => setIsReadyToApply(true), 1500);
         }
-        return () => clearTimeout(timer);
+        return () => { if (timer) clearTimeout(timer); };
     }, [templatesLoaded, companyProfiles, priceList]);
 
     useEffect(() => {
@@ -521,7 +523,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
         }
         setIsSearchingDoc(true);
         const { data, error } = await supabase
-            .from('extracted_invoices')
+            .from('invoices')
             .select('*')
             .or(`invoice_metadata->>invoice_number.ilike.%${term}%,receiver_details->>name.ilike.%${term}%,issuer_details->>name.ilike.%${term}%`)
             .order('created_at', { ascending: false })
