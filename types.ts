@@ -251,6 +251,7 @@ export interface InvoiceItem {
   igst_rate?: number;
   igst_amount?: number;
   total_value: number;
+  image_url?: string;
 }
 
 export interface SupplyRecord {

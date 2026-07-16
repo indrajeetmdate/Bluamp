@@ -97,6 +97,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
     const [visibleColumns, setVisibleColumns] = useState({
         index: true,
         description: true,
+        image: false,
         hsn: true,
         quantity: true,
         rate: true,
@@ -838,7 +839,12 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
                 .eq('invoice_metadata->>invoice_number', invNum)
                 .maybeSingle();
 
-            if (checkError) throw checkError;
+            if (checkError) {
+                console.warn('[Save] Duplicate check query failed:', checkError.message);
+                // Don't throw on query error — allow save to proceed with a warning
+                const proceed = confirm(`Warning: Could not verify if this invoice number already exists (${checkError.message}). Save anyway?`);
+                if (!proceed) { setIsSaving(false); return; }
+            }
             if (existing) {
                 alert(`Duplicate detected: Invoice #${invNum} already exists in the finance dashboard.`);
                 setIsSaving(false);
@@ -888,7 +894,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
         document.title = originalTitle;
     };
 
-    const generateInvoiceNumber = async (overrideDocType?: string, overrideOtherParty?: string) => {
+    const generateInvoiceNumber = async (overrideDocType?: string, overrideOtherParty?: string, _retryCount = 0) => {
         const currentDocType = overrideDocType || docType;
         const date = new Date();
         const month = date.getMonth() + 1;
@@ -918,10 +924,17 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
             const newPrefix = `${typeTag}/DC/${fyStr}/`;
             
             // Query for all invoices in this series to find the maximum sequence number
-            const { data } = await supabase
+            const { data, error: queryError } = await supabase
                 .from('invoices')
                 .select('invoice_metadata')
                 .ilike('invoice_metadata->>invoice_number', `${newPrefix}%`);
+
+            // Retry once if query fails (stale session)
+            if (queryError && _retryCount < 1) {
+                console.warn('[generateInvoiceNumber] Query failed, retrying...', queryError.message);
+                await new Promise(r => setTimeout(r, 500));
+                return generateInvoiceNumber(overrideDocType, overrideOtherParty, _retryCount + 1);
+            }
 
             let maxSeq = 0;
             if (data && data.length > 0) {
@@ -962,10 +975,17 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
         const fyPrefix = `${prefixBase}.${code}.${fyStr}.`;
 
         // Fetch all invoices for THIS financial year to find the maximum sequence
-        const { data } = await supabase
+        const { data, error: queryErrorOld } = await supabase
             .from('invoices')
             .select('invoice_metadata')
             .ilike('invoice_metadata->>invoice_number', `${fyPrefix}%`);
+
+        // Retry once if query fails (stale session)
+        if (queryErrorOld && _retryCount < 1) {
+            console.warn('[generateInvoiceNumber] Old path query failed, retrying...', queryErrorOld.message);
+            await new Promise(r => setTimeout(r, 500));
+            return generateInvoiceNumber(overrideDocType, overrideOtherParty, _retryCount + 1);
+        }
 
         let maxSeqOld = 0;
         if (data && data.length > 0) {
@@ -1524,6 +1544,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
                                     <div className="absolute top-64 left-16 bg-white shadow-xl border rounded p-3 w-48 z-20 grid grid-cols-2 gap-2">
                                         <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={visibleColumns.index} onChange={e => setVisibleColumns({ ...visibleColumns, index: e.target.checked })} /> No #</label>
                                         <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={visibleColumns.description} onChange={e => setVisibleColumns({ ...visibleColumns, description: e.target.checked })} /> Desc</label>
+                                        <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={(visibleColumns as any).image} onChange={e => setVisibleColumns({ ...visibleColumns, image: e.target.checked })} /> Photo</label>
                                         <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={visibleColumns.hsn} onChange={e => setVisibleColumns({ ...visibleColumns, hsn: e.target.checked })} /> HSN</label>
                                         <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={visibleColumns.quantity} onChange={e => setVisibleColumns({ ...visibleColumns, quantity: e.target.checked })} /> Qty</label>
                                         <label className="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" checked={visibleColumns.rate} onChange={e => setVisibleColumns({ ...visibleColumns, rate: e.target.checked })} /> Rate</label>
@@ -1544,6 +1565,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
                                     <tr className="border-b-2" style={{ borderColor: config.color }}>
                                         {visibleColumns.index && <th className="py-2 pl-2 w-8 text-slate-500 font-semibold">#</th>}
                                         {visibleColumns.description && <th className="py-2 text-slate-500 font-semibold uppercase tracking-wider">Description</th>}
+                                        {(visibleColumns as any).image && <th className="py-2 text-center w-16 text-slate-500 font-semibold">Photo</th>}
                                         {visibleColumns.hsn && <th className="py-2 text-left w-24 text-slate-500 font-semibold">HSN/SAC</th>}
                                         {visibleColumns.quantity && <th className="py-2 text-right w-14 text-slate-500 font-semibold">Qty</th>}
                                         {visibleColumns.rate && <th className="py-2 text-right w-24 text-slate-500 font-semibold">Rate ({currencySymbol})</th>}
@@ -1616,6 +1638,12 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
                                                         ))}
                                                     </div>
                                                 )}
+                                            </td>}
+                                            {(visibleColumns as any).image && <td className="py-2 text-center align-top">
+                                                <div className="flex flex-col items-center gap-1">
+                                                    {item.image_url && <img src={item.image_url} alt="" className="w-12 h-12 object-contain rounded border border-slate-200" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                                                    <input className="w-full bg-transparent outline-none text-[10px] text-blue-600 no-print" value={item.image_url || ''} onChange={e => updateItem(idx, 'image_url', e.target.value)} placeholder="Paste image URL" />
+                                                </div>
                                             </td>}
                                             {visibleColumns.hsn && <td className="py-2"><input className="w-full bg-transparent outline-none text-slate-600 text-xs" value={item.hsn_sac || ''} onChange={e => updateItem(idx, 'hsn_sac', e.target.value)} placeholder="—" /></td>}
                                             {visibleColumns.quantity && <td className="py-2 text-right"><input className="w-full bg-transparent outline-none text-right" value={item.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} /></td>}
@@ -1874,6 +1902,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
                                                 <tr className="border-b-2" style={{ borderColor: config.color }}>
                                                     {visibleColumns.index && <th className="py-1.5 pl-2 w-8 text-slate-500 font-semibold">#</th>}
                                                     {visibleColumns.description && <th className="py-1.5 text-slate-500 font-semibold uppercase tracking-wider">Description</th>}
+                                                    {(visibleColumns as any).image && <th className="py-1.5 text-center w-14 text-slate-500 font-semibold">Photo</th>}
                                                     {visibleColumns.hsn && <th className="py-1.5 text-left w-20 text-slate-500 font-semibold">HSN/SAC</th>}
                                                     {visibleColumns.quantity && <th className="py-1.5 text-right w-14 text-slate-500 font-semibold">Qty</th>}
                                                     {visibleColumns.rate && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Rate ({currencySymbol})</th>}
@@ -1889,6 +1918,7 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
                                                         <tr key={globalIdx}>
                                                             {visibleColumns.index && <td className="py-1.5 pl-2 text-slate-400">{globalIdx + 1}</td>}
                                                             {visibleColumns.description && <td className="py-1.5 font-medium text-slate-800">{safeRender(item.description)}</td>}
+                                                            {(visibleColumns as any).image && <td className="py-1.5 text-center">{item.image_url && <img src={item.image_url} alt="" className="w-10 h-10 object-contain rounded inline-block" />}</td>}
                                                             {visibleColumns.hsn && <td className="py-1.5 text-slate-600 text-xs">{item.hsn_sac || '—'}</td>}
                                                             {visibleColumns.quantity && <td className="py-1.5 text-right">{item.quantity}</td>}
                                                             {visibleColumns.rate && <td className="py-1.5 text-right">{item.unit_price}</td>}

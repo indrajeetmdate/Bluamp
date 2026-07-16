@@ -41,6 +41,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, invoices, 
         visibleColumns: {
             index: true,
             description: true,
+            image: false,
             hsn: true,
             quantity: true,
             rate: true,
@@ -308,6 +309,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, invoices, 
                                             <tr className="border-b-2" style={{ borderColor: config.color }}>
                                                 {config.visibleColumns.index && <th className="py-1.5 pl-2 w-8 text-slate-500 font-semibold">#</th>}
                                                 {config.visibleColumns.description && <th className="py-1.5 text-slate-500 font-semibold uppercase tracking-wider">Description</th>}
+                                                {(config.visibleColumns as any).image && <th className="py-1.5 text-center w-14 text-slate-500 font-semibold">Photo</th>}
                                                 {config.visibleColumns.hsn && <th className="py-1.5 text-left w-20 text-slate-500 font-semibold">HSN/SAC</th>}
                                                 {config.visibleColumns.quantity && <th className="py-1.5 text-right w-14 text-slate-500 font-semibold">Qty</th>}
                                                 {config.visibleColumns.rate && <th className="py-1.5 text-right w-24 text-slate-500 font-semibold">Rate ({currencySymbol})</th>}
@@ -323,6 +325,7 @@ const InvoicePrintView: React.FC<InvoicePrintViewProps> = ({ invoice, invoices, 
                                                     <tr key={globalIdx}>
                                                         {config.visibleColumns.index && <td className="py-1.5 pl-2 text-slate-400">{globalIdx + 1}</td>}
                                                         {config.visibleColumns.description && <td className="py-1.5 font-medium text-slate-800">{safeRender(item.description)}</td>}
+                                                        {(config.visibleColumns as any).image && <td className="py-1.5 text-center">{item.image_url && <img src={item.image_url} alt="" className="w-10 h-10 object-contain rounded inline-block" />}</td>}
                                                         {config.visibleColumns.hsn && <td className="py-1.5 text-slate-600 text-xs">{item.hsn_sac || '—'}</td>}
                                                         {config.visibleColumns.quantity && <td className="py-1.5 text-right">{item.quantity}</td>}
                                                         {config.visibleColumns.rate && <td className="py-1.5 text-right">{item.unit_price}</td>}

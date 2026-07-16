@@ -119,6 +119,15 @@ export function useSupabase<T>(
       }
     };
     fetchAll();
+
+    // Re-fetch when the browser tab becomes visible again (fixes stale sessions)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && initialFetchDone.current && syncEnabled.current) {
+        fetchAll();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [tableName]);
 
   // Cleanup debounce timer on unmount
