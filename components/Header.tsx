@@ -66,6 +66,7 @@ const ExternalNavButton: React.FC<{ href: string; children: React.ReactNode; ico
 const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRole, onLogout }) => {
 
   const categories = useMemo(() => ({
+    home: ['home'] as View[],
     operations: ['received', 'testing', 'wip', 'dtf', 'finished', 'storage', 'supplies'] as View[],
     finance: ['finance_upload', 'finance_dashboard', 'finance_gst', 'finance_expenses', 'finance_prices', 'finance_maker'] as View[],
     analytics: ['ai_assistant', 'reports', 'master', 'log'] as View[],
@@ -73,6 +74,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
   }), []);
 
   const currentCategory = useMemo(() => {
+    if (currentView === 'home') return 'home';
     if (categories.finance.includes(currentView)) return 'finance';
     if (categories.operations.includes(currentView)) return 'operations';
     if (categories.analytics.includes(currentView)) return 'analytics';
@@ -85,7 +87,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between h-auto md:h-16">
           <div className="flex items-center justify-between py-3 md:py-0 mr-8">
-            <div className="flex items-center cursor-pointer gap-3" onClick={() => setView('received')}>
+            <div className="flex items-center cursor-pointer gap-3" onClick={() => setView('home')}>
               <img
                 src="https://bfkxdpripwjxenfvwpfu.supabase.co/storage/v1/object/public/Logo/DC_Full_battery_black_bg.png"
                 alt="Datlion Cnergy Logo"
@@ -99,6 +101,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
           </div>
 
           <nav className="flex space-x-1 overflow-x-auto scrollbar-hide md:flex-grow md:justify-center pt-1 md:pt-0">
+            <TopNavButton isActive={currentCategory === 'home'} onClick={() => setView('home')} icon={<svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>}>Home</TopNavButton>
             <TopNavButton isActive={currentCategory === 'operations'} onClick={() => setView('received')} icon={<CubeIcon className="h-4 w-4" />}>Operations</TopNavButton>
             <TopNavButton isActive={currentCategory === 'finance'} onClick={() => setView(userRole === 'admin' ? 'finance_dashboard' : 'finance_maker')} icon={<FileTextIcon className="h-4 w-4" />}>Finance</TopNavButton>
             <TopNavButton isActive={currentCategory === 'analytics'} onClick={() => setView('reports')} icon={<SearchIcon className="h-4 w-4" />}>Analytics</TopNavButton>
@@ -113,7 +116,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
           <div className="absolute top-4 right-4 md:static flex items-center md:ml-6">
             <div className="text-right mr-3 hidden md:block">
               <div className="text-xs font-bold text-white">{username}</div>
-              <div className="text-[9px] uppercase font-black text-[#8EBF45] bg-white/10 px-1.5 py-0.5 rounded mt-0.5">{userRole === 'admin' ? 'Director Admin' : 'General Employee'}</div>
+              <div className="text-[9px] uppercase font-black text-[#8EBF45] bg-white/10 px-1.5 py-0.5 rounded mt-0.5">{userRole === 'admin' ? 'Director Admin' : userRole === 'billing' ? 'Billing & Ops' : 'General Employee'}</div>
             </div>
             <button onClick={onLogout} className="ml-3 text-slate-500 hover:text-[#8EBF45] transition-colors p-1.5 hover:bg-white/5 rounded-full" title="Logout">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

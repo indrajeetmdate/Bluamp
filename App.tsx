@@ -13,6 +13,7 @@ import UserManagement from './components/UserManagement';
 import MasterData from './components/MasterData';
 import CompanyProfiles from './components/CompanyProfiles';
 import SuppliesRecord from './components/SuppliesRecord';
+import HomeDashboard from './components/HomeDashboard';
 import InvoiceModule from './components/invoices/InvoiceModule'; 
 import AiChatPanel from './components/invoices/AiChatPanel';
 import StorageManager from './components/RackSearch'; 
@@ -32,7 +33,7 @@ const App: React.FC = () => {
 
   const [view, setView] = useState<View>(() => {
       const v = searchParams.get('view');
-      return v ? (v as View) : 'received';
+      return v ? (v as View) : 'home';
   }); 
   
   // Auth state
@@ -290,6 +291,17 @@ const App: React.FC = () => {
     }
 
     switch (view) {
+      case 'home':
+        return <HomeDashboard
+          receivedGoods={receivedGoods}
+          wipItems={wipItems}
+          finishedGoods={finishedGoods}
+          recipes={recipes}
+          suppliesRecords={suppliesRecords}
+          logs={logs}
+          currentUser={currentUser}
+          setView={setView}
+        />;
       case 'received':
         return (
           <ReceivedGoods 

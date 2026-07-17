@@ -1,5 +1,6 @@
 
 export type View =
+  | 'home'
   | 'received'
   | 'testing'
   | 'wip'
