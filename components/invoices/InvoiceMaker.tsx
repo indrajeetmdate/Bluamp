@@ -85,9 +85,9 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
         showTaxTable: true
     });
 
-    const [logo, setLogo] = useState<string | null>(null);
-    const [stamp, setStamp] = useState<string | null>(null);
-    const [signature, setSignature] = useState<string | null>(null);
+    const [logo, setLogo] = useState<string | null>(draft?.logo || null);
+    const [stamp, setStamp] = useState<string | null>(draft?.stamp || null);
+    const [signature, setSignature] = useState<string | null>(draft?.signature || null);
     const [isSaving, setIsSaving] = useState(false);
 
     // Document Search State
@@ -160,14 +160,14 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
         if (initialData?.id || doc.id) return; // Don't persist if editing a saved record
         const timer = setTimeout(() => {
             const dataToSave = {
-                docType, customTitle, doc, config, billedToLabel, shippedToLabel, visibleColumns, selectedTemplateId, printMode
+                docType, customTitle, doc, config, billedToLabel, shippedToLabel, visibleColumns, selectedTemplateId, printMode, logo, stamp, signature
             };
             try {
                 localStorage.setItem('invoice_maker_draft', JSON.stringify(dataToSave));
             } catch(e) {}
         }, 1000);
         return () => clearTimeout(timer);
-    }, [docType, customTitle, doc, config, billedToLabel, shippedToLabel, visibleColumns, selectedTemplateId, printMode, initialData?.id, doc.id]);
+    }, [docType, customTitle, doc, config, billedToLabel, shippedToLabel, visibleColumns, selectedTemplateId, printMode, logo, stamp, signature, initialData?.id, doc.id]);
 
     useEffect(() => {
         let timer: any;
@@ -547,15 +547,22 @@ const InvoiceMaker: React.FC<InvoiceMakerProps> = ({ currentUser, username, comp
             return;
         }
         setIsSearchingDoc(true);
+        // Using client-side filter of recent documents to avoid PostgREST JSON .or() operator limitations
         const { data, error } = await supabase
             .from('invoices')
             .select('*')
-            .or(`invoice_metadata->>invoice_number.ilike.%${term}%,receiver_details->>name.ilike.%${term}%,issuer_details->>name.ilike.%${term}%`)
             .order('created_at', { ascending: false })
-            .limit(10);
+            .limit(50);
         
         if (data && !error) {
-            setDocSearchResults(data);
+            const searchStr = term.toLowerCase();
+            const filtered = data.filter(d => {
+                const invNum = (d.invoice_metadata?.invoice_number || '').toLowerCase();
+                const recName = (d.receiver_details?.name || '').toLowerCase();
+                const issName = (d.issuer_details?.name || '').toLowerCase();
+                return invNum.includes(searchStr) || recName.includes(searchStr) || issName.includes(searchStr);
+            });
+            setDocSearchResults(filtered.slice(0, 10));
         }
         setIsSearchingDoc(false);
     };
