@@ -240,6 +240,7 @@ export interface InvoiceItem {
   make_model?: string;
   status?: string;
   hsn_sac?: string;
+  image_url?: string;
   quantity: number;
   unit_price: number;
   discount?: number;
