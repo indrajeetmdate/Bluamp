@@ -54,13 +54,13 @@ export async function buildSlackTaskDigestPayload(appUrl: string, requestedUser?
 
   if (filteredTasks.length === 0) {
     return {
-      text: `🎉 *Datlion Cnergy - Daily To-Do Digest (${dateStr})*\n\nAll tasks are completed! No pending items.`,
+      text: `🎉 *Bluamp - Daily To-Do Digest (${dateStr})*\n\nAll tasks are completed! No pending items.`,
       blocks: [
         {
           type: 'header',
           text: {
             type: 'plain_text',
-            text: '🎉 Datlion Cnergy - Daily To-Do Digest',
+            text: '🎉 Bluamp - Daily To-Do Digest',
             emoji: true
           }
         },
@@ -116,7 +116,7 @@ export async function buildSlackTaskDigestPayload(appUrl: string, requestedUser?
       type: 'header',
       text: {
         type: 'plain_text',
-        text: '📋 Datlion Cnergy — Daily To-Do Digest',
+        text: '📋 Bluamp — Daily To-Do Digest',
         emoji: true
       }
     },
@@ -175,7 +175,7 @@ export async function buildSlackTaskDigestPayload(appUrl: string, requestedUser?
   });
 
   return {
-    text: `📋 *Datlion Cnergy - Daily To-Do Tasks (${totalPending} pending)*`,
+    text: `📋 *Bluamp - Daily To-Do Tasks (${totalPending} pending)*`,
     blocks
   };
 }
@@ -191,7 +191,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const appUrl = process.env.VITE_APP_URL || process.env.APP_URL || 'https://inventory.cnergy.co.in';
+    const appUrl = process.env.VITE_APP_URL || process.env.APP_URL || 'https://bluamp.vercel.app';
     const defaultWebhookUrl = process.env.SLACK_WEBHOOK_URL_TO_DO || process.env.SLACK_WEBHOOK_URL || process.env.SLACK_TASKS_WEBHOOK_URL;
 
     // Check if called with custom webhook URL from request body or query

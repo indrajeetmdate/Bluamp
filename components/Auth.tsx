@@ -29,9 +29,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     <div className="min-h-screen bg-[#205f64] flex flex-col justify-center items-center p-4">
         <div className="flex flex-col items-center mb-10 animate-fade-in">
             <img 
-                src="https://bfkxdpripwjxenfvwpfu.supabase.co/storage/v1/object/public/Logo/DC_Full_battery_black_bg.png" 
+                src="https://bluampenergy.com/wp-content/uploads/2018/07/logo-white-001.png" 
                 alt="Bluamp Logo" 
-                className="h-24 w-auto object-contain mb-6 rounded-xl shadow-lg"
+                className="h-24 w-auto object-contain mb-6 drop-shadow-md"
             />
             <h1 className="text-3xl font-black text-white tracking-tight font-brand">Bluamp Plant OS</h1>
             <p className="text-xs font-black text-[#75c081] uppercase tracking-[0.3em] mt-2">Inventory & Manufacturing Control</p>

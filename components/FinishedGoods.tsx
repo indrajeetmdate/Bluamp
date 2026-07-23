@@ -72,7 +72,7 @@ const FinishedGoods: React.FC<FinishedGoodsProps> = ({ finishedGoods, setFinishe
             weight: meta.weight ? `${meta.weight} kg` : '-',
             productId: unitId,
             qrCodeUrl: unitId, // Simple string for now, could be a full URL
-            email: 'sales@cnergy.co.in',
+            email: 'sales@bluampenergy.com',
             
             // DTF Fields
             peakPower: meta.peakPower ? `${meta.peakPower} Wp` : undefined,

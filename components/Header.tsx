@@ -89,12 +89,12 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
           <div className="flex items-center justify-between py-3 md:py-0 mr-8">
             <div className="flex items-center cursor-pointer gap-3" onClick={() => setView('home')}>
               <img
-                src="https://bfkxdpripwjxenfvwpfu.supabase.co/storage/v1/object/public/Logo/DC_Full_battery_black_bg.png"
-                alt="Datlion Cnergy Logo"
-                className="h-10 w-auto object-contain rounded-md p-0.5 bg-black/20"
+                src="https://bluampenergy.com/wp-content/uploads/2018/07/logo-white-001.png"
+                alt="Bluamp Logo"
+                className="h-10 w-auto object-contain rounded-md p-0.5"
               />
               <div className="flex flex-col justify-center">
-                <h1 className="text-lg font-extrabold text-white leading-none tracking-tight font-brand bluamp-logo-text">Datlion Cnergy</h1>
+                <h1 className="text-lg font-extrabold text-white leading-none tracking-tight font-brand bluamp-logo-text">Bluamp</h1>
                 <p className="text-[10px] text-[#75c081] font-black tracking-widest uppercase mt-0.5">Plant Management OS</p>
               </div>
             </div>
@@ -206,7 +206,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
 
                     {/* 2. Reports */}
                     <a
-                      href="https://support.cnergy.co.in/report"
+                      href="https://support.bluampenergy.com/report"
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setIsOtherOpen(false)}
@@ -224,7 +224,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
 
                     {/* 3. Prismatic Data */}
                     <a
-                      href="https://support.cnergy.co.in/data"
+                      href="https://support.bluampenergy.com/data"
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setIsOtherOpen(false)}

@@ -61,7 +61,7 @@ export default async function handler(req, res) {
 
     const backupJson = JSON.stringify(backupData, null, 2);
     const dateStr = new Date().toISOString().split('T')[0];
-    const filename = `Datlion_Cnergy_Backup_${dateStr}.json`;
+    const filename = `Bluamp_Backup_${dateStr}.json`;
 
     // Configure Nodemailer
     const transporter = nodemailer.createTransport({
@@ -75,12 +75,12 @@ export default async function handler(req, res) {
     const targetEmail = process.env.BACKUP_EMAIL || process.env.GMAIL_USER;
 
     const mailOptions = {
-      from: `"Datlion Cnergy Backup" <${process.env.GMAIL_USER}>`,
+      from: `"Bluamp Backup" <${process.env.GMAIL_USER}>`,
       to: targetEmail,
       subject: `🛡️ Automated Database Backup - ${dateStr}`,
       html: `
         <h2>Daily Database Backup</h2>
-        <p>Attached is your automated JSON backup of the Datlion Cnergy database for <b>${dateStr}</b>.</p>
+        <p>Attached is your automated JSON backup of the Bluamp database for <b>${dateStr}</b>.</p>
         <p><b>Total Tables Backed Up:</b> ${Object.keys(backupData).length}</p>
         <p><b>Timestamp:</b> ${timestamp}</p>
         <br/>

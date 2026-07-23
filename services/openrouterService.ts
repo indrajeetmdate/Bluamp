@@ -46,7 +46,7 @@ CRITICAL RULES:
 4. **METADATA**:
    - Dates: YYYY-MM-DD.
    - Money: Numbers only (no symbols).
-   - Source Type: If issuer is "Datlion Cnergy", 'sales'. If receiver is "Datlion Cnergy", 'purchase'. Default 'purchase'.
+   - Source Type: If issuer is "Bluamp", 'sales'. If receiver is "Bluamp", 'purchase'. Default 'purchase'.
    - ITC: Default 'set_off' for purchases unless blocked.
 
 Return a JSON object matching this schema exactly:

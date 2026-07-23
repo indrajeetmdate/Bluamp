@@ -28,11 +28,11 @@ const GUIDE_SECTIONS: GuideSection[] = [
     id: 'overview',
     category: 'getting_started',
     title: 'Application Overview & Navigation',
-    subtitle: 'Learn the fundamentals of Datlion Cnergy Plant OS',
+    subtitle: 'Learn the fundamentals of Bluamp Plant OS',
     icon: '⚡',
     accessRole: 'All Roles',
     targetView: 'home',
-    overview: 'Datlion Cnergy Plant OS is an end-to-end Battery & Energy Storage Assembly Plant Management System. It coordinates raw cell intake, capacity testing, module/pack assembly (WIP), storage layout, sales invoicing, GST returns, and full barcode traceability.',
+    overview: 'Bluamp Plant OS is an end-to-end Battery & Energy Storage Assembly Plant Management System. It coordinates raw cell intake, capacity testing, module/pack assembly (WIP), storage layout, sales invoicing, GST returns, and full barcode traceability.',
     keyFeatures: [
       'Top Navigation Bar organized into Home, Operations, Finance, Admin, and Other Links',
       'Real-time Operational & Financial KPI Dashboard',
@@ -47,10 +47,10 @@ const GUIDE_SECTIONS: GuideSection[] = [
     functionsDetail: [
       { name: 'Top Bar Navigation', description: 'Main navigation header containing workspace branding, module tabs, role badge, and user dropdown.', usage: 'Click tabs to switch modules. Hover "Other Links" for secondary utilities.' },
       { name: 'Role Badge Indicator', description: 'Displays your current logged-in role (Director Admin, Billing & Ops, General Employee).', usage: 'Use to verify permission levels when attempting administrative operations.' },
-      { name: 'Logo Quick Home', description: 'Clicking the Datlion Cnergy logo resets current view back to the Home Dashboard.', usage: 'Click logo in top-left anytime for immediate dashboard return.' }
+      { name: 'Logo Quick Home', description: 'Clicking the Bluamp logo resets current view back to the Home Dashboard.', usage: 'Click logo in top-left anytime for immediate dashboard return.' }
     ],
     proTips: [
-      'Click the Datlion Cnergy logo anytime in the top-left to quickly return to your Home Dashboard.',
+      'Click the Bluamp logo anytime in the top-left to quickly return to your Home Dashboard.',
       'Your active workspace is preserved in local cache, so refreshing the browser will not erase active drafts.'
     ]
   },
@@ -582,10 +582,10 @@ export const HelpGuide: React.FC<HelpGuideProps> = ({ setView, userRole }) => {
                 📖 Enterprise User Manual & Knowledge Base
               </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-brand">
-                Datlion Cnergy <span className="text-[#8EBF45]">System User Manual</span>
+                Bluamp <span className="text-[#8EBF45]">System User Manual</span>
               </h1>
               <p className="mt-2 text-slate-300 text-sm sm:text-base max-w-2xl">
-                Comprehensive step-by-step documentation, detailed function catalog, role permissions, and factory floor workflows for Datlion Cnergy Plant OS.
+                Comprehensive step-by-step documentation, detailed function catalog, role permissions, and factory floor workflows for Bluamp Plant OS.
               </p>
             </div>
             
@@ -854,7 +854,7 @@ export const HelpGuide: React.FC<HelpGuideProps> = ({ setView, userRole }) => {
                   Official Technical Handbook
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-2">
-                  Datlion Cnergy Plant OS — Comprehensive User Manual
+                  Bluamp Plant OS — Comprehensive User Manual
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-400 mt-1">
                   Complete end-to-end specification manual for all 18 plant management modules.
@@ -946,7 +946,7 @@ export const HelpGuide: React.FC<HelpGuideProps> = ({ setView, userRole }) => {
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <a
-              href="https://support.cnergy.co.in/report"
+              href="https://support.bluampenergy.com/report"
               target="_blank"
               rel="noopener noreferrer"
               className="px-3.5 py-2 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition-colors flex items-center gap-1.5"
@@ -955,7 +955,7 @@ export const HelpGuide: React.FC<HelpGuideProps> = ({ setView, userRole }) => {
               <span className="text-slate-400">↗</span>
             </a>
             <a
-              href="https://prismaticdata.cnergy.co.in"
+              href="https://prismaticdata.bluampenergy.com"
               target="_blank"
               rel="noopener noreferrer"
               className="px-3.5 py-2 text-xs font-bold bg-[#8EBF45]/20 hover:bg-[#8EBF45]/30 text-[#8EBF45] rounded-lg border border-[#8EBF45]/40 transition-colors flex items-center gap-1.5"

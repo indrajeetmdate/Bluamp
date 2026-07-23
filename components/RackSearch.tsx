@@ -263,7 +263,7 @@ const StorageManager: React.FC<StorageManagerProps> = ({
 
     // Dynamic QR URL Generation
     const getQrUrl = (unitId: string) => {
-        const baseUrl = "https://inventory.cnergy.co.in/";
+        const baseUrl = window.location.origin + "/";
         return `${baseUrl}?public_storage=${unitId}`;
     };
 

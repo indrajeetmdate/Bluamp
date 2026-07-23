@@ -71,7 +71,7 @@ const DUMMY_EMPLOYEE_TASKS: EmployeeTask[] = [
   },
   {
     id: 'task-5',
-    assigned_to: 'datlioncnergy@gmail.com',
+    assigned_to: 'admin@bluamp.com',
     title: 'Audit daily rack storage map & update bin tags',
     description: 'Ensure finished goods in Rack A2 match physical serial tags.',
     completed: false,
@@ -178,7 +178,7 @@ const App: React.FC = () => {
 
     // Ensure admin role is preserved — password is managed in the database only
     setUsers(prevUsers => {
-        const ADMIN_USERNAME = 'datlioncnergy@gmail.com';
+        const ADMIN_USERNAME = 'admin@bluamp.com';
         const existingUsers = [...prevUsers];
         const adminIndex = existingUsers.findIndex(u => u.username === ADMIN_USERNAME);
 
@@ -323,7 +323,7 @@ const App: React.FC = () => {
     if (currentUser?.role !== 'admin') {
         return 'Permission denied.';
     }
-    if (usernameToDelete === 'datlioncnergy@gmail.com') {
+    if (usernameToDelete === 'admin@bluamp.com') {
         return 'The default admin account cannot be deleted.';
     }
     if (usernameToDelete === currentUser.username) {

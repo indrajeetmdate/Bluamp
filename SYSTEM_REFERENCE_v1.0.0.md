@@ -1,5 +1,5 @@
 
-# System Reference & Version Rules Document: Datlion Cnergy Plant OS
+# System Reference & Version Rules Document: Bluamp Plant OS
 
 **Version:** 1.0.0 (Deployment Ready)
 **Status:** Immutable Source of Truth

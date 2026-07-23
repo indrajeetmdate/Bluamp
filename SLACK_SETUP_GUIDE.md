@@ -1,5 +1,5 @@
 # 🚀 Complete Slack Setup & Integration Guide
-**Datlion Cnergy Plant OS**
+**Bluamp Plant OS**
 
 This guide provides step-by-step instructions for setting up Slack integration for:
 1. **Automated Daily 11:30 AM IST Employee Task Digest** (Incoming Webhook)
@@ -12,7 +12,7 @@ This guide provides step-by-step instructions for setting up Slack integration f
 
 1. Go to [https://api.slack.com/apps](https://api.slack.com/apps).
 2. Click **Create New App** → Choose **From scratch**.
-3. Set **App Name**: `Datlion Cnergy Plant OS`
+3. Set **App Name**: `Bluamp Plant OS`
 4. Select your **Slack Workspace** and click **Create App**.
 
 ---
@@ -51,7 +51,7 @@ Employees using Slack on their phone can type `/tasks` to see their pending task
 1. In Slack App settings, click **Slash Commands** → **Create New Command**.
 2. Fill out the details:
    * **Command**: `/tasks`
-   * **Request URL**: `https://inventory.cnergy.co.in/api/slack-daily-tasks`
+   * **Request URL**: `https://bluamp.vercel.app/api/slack-daily-tasks`
    * **Short Description**: View pending employee tasks
    * **Usage Hint**: [optional username]
 3. Click **Save**.
@@ -64,7 +64,7 @@ To enable creating invoice/quotation drafts directly from Slack:
 
 1. In Slack App settings, click **Slash Commands** → **Create New Command**.
    * **Command**: `/invoice`
-   * **Request URL**: `https://inventory.cnergy.co.in/api/slack-invoice`
+   * **Request URL**: `https://bluamp.vercel.app/api/slack-invoice`
    * **Short Description**: Generate AI invoice draft
    * **Usage Hint**: e.g., "Create quotation for ACME Corp, 5x 48V 100Ah Batteries"
 2. Click **Save**.
@@ -74,7 +74,7 @@ To enable creating invoice/quotation drafts directly from Slack:
 ## Step 6: Test & Verify
 
 ### 1. Test 11:30 AM Task Digest Manually
-* Open the Datlion Cnergy Web/Mobile App → Navigate to **Employee To-Do Management**.
+* Open the Bluamp Web/Mobile App → Navigate to **Employee To-Do Management**.
 * Click the **📢 Send Slack Digest** button in the header bar.
 * Check your Slack channel to verify the message appears with priority badge colors and action buttons.
 
@@ -87,6 +87,6 @@ To enable creating invoice/quotation drafts directly from Slack:
 ## Summary of URL Endpoints
 | Feature | Endpoint URL | Trigger |
 | :--- | :--- | :--- |
-| **Daily 11:30 AM Task Digest** | `https://inventory.cnergy.co.in/api/slack-daily-tasks` | Vercel Cron at 11:30 AM IST / Webhook |
+| **Daily 11:30 AM Task Digest** | `https://bluamp.vercel.app/api/slack-daily-tasks` | Vercel Cron at 11:30 AM IST / Webhook |
 | **On-Demand Slash Command** | `/tasks` → `.../api/slack-daily-tasks` | User types `/tasks` in Slack mobile |
 | **AI Invoice Generator** | `/invoice` → `.../api/slack-invoice` | User types `/invoice` in Slack |

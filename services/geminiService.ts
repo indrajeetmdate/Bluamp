@@ -127,7 +127,7 @@ export const extractInvoiceData = async (
         4. **METADATA**:
            - Dates: YYYY-MM-DD.
            - Money: Numbers only (no symbols).
-           - Source Type: If issuer is "Datlion Cnergy", 'sales'. If receiver is "Datlion Cnergy", 'purchase'. Default 'purchase'.
+           - Source Type: If issuer is "Bluamp", 'sales'. If receiver is "Bluamp", 'purchase'. Default 'purchase'.
            - ITC: Default 'set_off' for purchases unless blocked.`;
 
         const response = await fetch('/api/gemini', {
@@ -247,7 +247,7 @@ export const generateInvoiceFromText = async (
     }
 ): Promise<any> => {
     try {
-        const systemPrompt = `You are an AI Invoice Assistant for the Datlion Cnergy Plant OS. Your job is to translate a user's natural language request into a strict JSON payload that will be used to automatically fill out an Invoice/Quotation form.
+        const systemPrompt = `You are an AI Invoice Assistant for the Bluamp Plant OS. Your job is to translate a user's natural language request into a strict JSON payload that will be used to automatically fill out an Invoice/Quotation form.
 
 You will be provided with the following SYSTEM CONTEXT (data currently in the database):
 [COMPANIES]: ${JSON.stringify(context.companies)}

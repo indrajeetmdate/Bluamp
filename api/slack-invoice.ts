@@ -91,7 +91,7 @@ async function processInvoice(userText: string, responseUrl: string) {
     
         const ai = new GoogleGenAI({ apiKey: API_KEY });
         
-        const systemPrompt = `You are an AI Invoice Assistant for the Datlion Cnergy Plant OS. Your job is to translate a user's natural language request into a strict JSON payload that will be used to automatically fill out an Invoice/Quotation form.
+        const systemPrompt = `You are an AI Invoice Assistant for the Bluamp Plant OS. Your job is to translate a user's natural language request into a strict JSON payload that will be used to automatically fill out an Invoice/Quotation form.
     
     You will be provided with the following SYSTEM CONTEXT (data currently in the database):
     [COMPANIES]: ${JSON.stringify(context.companies)}
@@ -155,7 +155,7 @@ async function processInvoice(userText: string, responseUrl: string) {
           return;
         }
     
-        const appUrl = process.env.VITE_APP_URL || 'https://inventory.cnergy.co.in';
+        const appUrl = process.env.VITE_APP_URL || 'https://bluamp.vercel.app';
         const invoiceUrl = `${appUrl}/?view=finance_maker&slack_draft=${dbData.id}`; 
     
         const slackResponse = {

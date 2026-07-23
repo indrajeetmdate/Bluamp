@@ -117,7 +117,7 @@ export const extractInvoiceDataLocal = async (
     
     Structure requirements:
     - "document_type": "invoice", "receipt", "credit_note"
-    - "source_type": "sales" (if issuer is Datlion Cnergy) or "purchase" (if receiver is Datlion Cnergy)
+    - "source_type": "sales" (if issuer is Bluamp) or "purchase" (if receiver is Bluamp)
     - "issuer_details": { name, gstin, address, email, phone, contact_person }
     - "receiver_details": { name, gstin, address, email, phone, contact_person }
     - "invoice_metadata": { invoice_number, invoice_date (YYYY-MM-DD), input_tax_credit ("set_off" or "non_set_off") }

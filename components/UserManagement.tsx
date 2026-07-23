@@ -79,7 +79,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onDel
                   {user.username !== currentUser.username ? (
                     <button 
                       onClick={() => {
-                        if (user.username === 'datlioncnergy@gmail.com') {
+                        if (user.username === 'admin@bluamp.com') {
                           alert('The default admin account cannot be deleted.');
                           return;
                         }
