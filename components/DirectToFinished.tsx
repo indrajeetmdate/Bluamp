@@ -29,7 +29,7 @@ const DirectToFinished: React.FC<DirectToFinishedProps> = ({
     const [remarks, setRemarks] = useState('');
 
     const availableGoods = useMemo(() => {
-        return receivedGoods.filter(g => g.quantity > 0 && g.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        return (receivedGoods || []).filter(g => g && g.quantity > 0 && (g.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
     }, [receivedGoods, searchTerm]);
 
     const handleOpenTransfer = (good: ReceivedGood) => {
@@ -105,7 +105,7 @@ const DirectToFinished: React.FC<DirectToFinishedProps> = ({
                 return {
                     ...g,
                     quantity: Math.max(0, g.quantity - transferQuantity),
-                    serials: g.serials.filter(s => !selectedSerials.includes(s))
+                    serials: (g.serials || []).filter(s => !selectedSerials.includes(s))
                 };
             }
             return g;
@@ -119,19 +119,19 @@ const DirectToFinished: React.FC<DirectToFinishedProps> = ({
         <div className="max-w-7xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-[#0D0D0D] tracking-tight">Direct to Finished</h1>
-                    <p className="text-sm text-[#404040] mt-1 font-medium">Route raw materials directly to finished goods inventory.</p>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Direct to Finished</h1>
+                    <p className="text-sm text-slate-600 mt-1 font-medium">Route raw materials directly to finished goods inventory.</p>
                 </div>
             </div>
 
             <div className="mb-6 relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#8EBF45] transition-colors">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
                     <SearchIcon className="h-5 w-5" />
                 </div>
                 <input
                     type="text"
                     placeholder="Search available stock..."
-                    className="block w-full p-4 pl-12 border-2 border-slate-200 rounded-2xl shadow-sm focus:outline-none focus:border-[#8EBF45] focus:ring-4 focus:ring-[#8EBF45]/10 transition-all text-[#404040]"
+                    className="block w-full p-4 pl-12 border-2 border-slate-200 rounded-2xl shadow-sm focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 transition-all text-slate-700"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                 />
@@ -141,19 +141,19 @@ const DirectToFinished: React.FC<DirectToFinishedProps> = ({
                 {availableGoods.map(good => (
                     <div key={good.id} className="bg-white rounded-2xl shadow-sm hover:shadow-xl p-6 flex flex-col border border-slate-200 transition-all duration-300">
                         <div className="flex-1">
-                            <h3 className="font-bold text-xl text-[#0D0D0D] leading-tight mb-1">{good.name}</h3>
-                            <p className="text-xs text-[#658C3E] font-black uppercase tracking-widest">{good.makeModel}</p>
+                            <h3 className="font-bold text-xl text-slate-900 leading-tight mb-1">{good.name}</h3>
+                            <p className="text-xs text-blue-600 font-black uppercase tracking-widest">{good.makeModel}</p>
                             <div className="mt-4 flex justify-between items-end border-t border-slate-50 pt-4">
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Available</p>
-                                    <p className="text-2xl font-black text-[#8EBF45]">{good.quantity}</p>
+                                    <p className="text-2xl font-black text-blue-600">{good.quantity}</p>
                                 </div>
                             </div>
                         </div>
                         <div className="mt-6">
                             <button 
                                 onClick={() => handleOpenTransfer(good)}
-                                className="w-full bg-[#0D0D0D] text-white py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs hover:bg-[#404040] transition-colors flex items-center justify-center gap-2"
+                                className="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold uppercase tracking-wider text-xs hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
                             >
                                 <ArrowRightIcon className="w-4 h-4" /> Send to Finished
                             </button>
@@ -166,28 +166,28 @@ const DirectToFinished: React.FC<DirectToFinishedProps> = ({
                 {selectedGood && (
                     <form onSubmit={handleTransfer} className="space-y-6">
                         <div>
-                            <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Item</label>
-                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 font-medium text-[#0D0D0D]">
+                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Item</label>
+                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 font-medium text-slate-900">
                                 {selectedGood.name} {selectedGood.makeModel ? `(${selectedGood.makeModel})` : ''}
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Transfer Quantity</label>
+                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Transfer Quantity</label>
                             <input 
                                 type="number" 
                                 min="1" 
                                 max={selectedGood.quantity}
                                 value={transferQuantity}
                                 onChange={e => setTransferQuantity(parseInt(e.target.value) || 1)}
-                                className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm font-bold"
+                                className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-sm font-bold"
                             />
                             <p className="text-xs text-slate-500 mt-1">Available: {selectedGood.quantity}</p>
                         </div>
 
                         {selectedGood.serials && selectedGood.serials.length > 0 && (
                             <div>
-                                <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
                                     Select Serials ({selectedSerials.length} / {transferQuantity})
                                 </label>
                                 <select 
@@ -210,18 +210,18 @@ const DirectToFinished: React.FC<DirectToFinishedProps> = ({
                                     type="checkbox" 
                                     checked={qcDone}
                                     onChange={e => setQcDone(e.target.checked)}
-                                    className="w-5 h-5 rounded border-gray-300 text-[#8EBF45] focus:ring-[#8EBF45]"
+                                    className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
                                 />
-                                <span className="text-sm font-bold text-[#404040]">QC Done (Optional)</span>
+                                <span className="text-sm font-bold text-slate-700">QC Done (Optional)</span>
                             </label>
 
                             <div>
-                                <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Remarks / Warranty Info</label>
+                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Remarks / Warranty Info</label>
                                 <textarea 
                                     value={remarks}
                                     onChange={e => setRemarks(e.target.value)}
                                     placeholder="Enter warranty periods or special notes..."
-                                    className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm resize-none"
+                                    className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-600 outline-none text-sm resize-none"
                                     rows={3}
                                 />
                             </div>
@@ -229,7 +229,7 @@ const DirectToFinished: React.FC<DirectToFinishedProps> = ({
 
                         <div className="flex justify-end gap-3 pt-4">
                             <button type="button" onClick={() => setIsTransferModalOpen(false)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700">Cancel</button>
-                            <button type="submit" className="px-6 py-2 bg-[#8EBF45] text-[#0D0D0D] font-bold rounded-lg hover:bg-[#658C3E] hover:text-white transition-colors">
+                            <button type="submit" className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors">
                                 Complete Transfer
                             </button>
                         </div>

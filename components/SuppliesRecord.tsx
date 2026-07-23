@@ -108,10 +108,12 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
     addLogEntry('Supply Record Deleted', `Item: ${record.item_name}`);
   };
 
-  const filteredRecords = suppliesRecords.filter(r => 
-    r.item_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.from_company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.to_company?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRecords = (suppliesRecords || []).filter(r => 
+    r && (
+      (r.item_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.from_company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.to_company?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   return (
@@ -127,14 +129,14 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
             <input
               type="text"
               placeholder="Search items or companies..."
-              className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45]/20 focus:border-[#8EBF45] w-64"
+              className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-64"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <button
             onClick={() => setIsAdding(true)}
-            className="bg-[#8EBF45] text-[#0D0D0D] px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-[#7aa83b] transition-colors shadow-sm"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"
           >
             <Plus size={18} /> Add Record
           </button>
@@ -149,7 +151,7 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
               <label className="text-[10px] font-bold text-slate-500 uppercase">Item Name</label>
               <input
                 type="text"
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45]/20 focus:border-[#8EBF45]"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 placeholder="e.g. Solar Inverters"
                 value={newItem.item_name}
                 onChange={(e) => setNewItem({ ...newItem, item_name: e.target.value })}
@@ -158,7 +160,7 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase">Direction</label>
               <select
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45]/20 focus:border-[#8EBF45]"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 value={newItem.direction}
                 onChange={(e) => setNewItem({ ...newItem, direction: e.target.value as 'inward' | 'outward' })}
               >
@@ -169,25 +171,25 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase">From Company</label>
               <select
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45]/20 focus:border-[#8EBF45]"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 value={newItem.from_company}
                 onChange={(e) => handleDropdownChange('from_company', e.target.value)}
               >
                 <option value="">Select Company</option>
                 {companyProfiles.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                <option value="ADD_NEW" className="font-bold text-[#658C3E]">+ Add New...</option>
+                <option value="ADD_NEW" className="font-bold text-blue-600">+ Add New...</option>
               </select>
             </div>
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase">To Company</label>
               <select
-                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45]/20 focus:border-[#8EBF45]"
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                 value={newItem.to_company}
                 onChange={(e) => handleDropdownChange('to_company', e.target.value)}
               >
                 <option value="">Select Company</option>
                 {companyProfiles.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                <option value="ADD_NEW" className="font-bold text-[#658C3E]">+ Add New...</option>
+                <option value="ADD_NEW" className="font-bold text-blue-600">+ Add New...</option>
               </select>
             </div>
           </div>
@@ -261,8 +263,8 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
                       onClick={() => toggleCheckbox(record.id, 'is_ordered')}
                       className={`w-6 h-6 rounded border-2 transition-all flex items-center justify-center mx-auto ${
                         record.is_ordered 
-                          ? 'bg-[#8EBF45] border-[#8EBF45] text-white' 
-                          : 'border-slate-300 hover:border-[#8EBF45]'
+                          ? 'bg-blue-600 border-blue-600 text-white' 
+                          : 'border-slate-300 hover:border-blue-500'
                       }`}
                     >
                       {record.is_ordered && <Check size={14} />}
@@ -276,8 +278,8 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
                           onClick={() => toggleCheckbox(record.id, 'is_received')}
                           className={`w-6 h-6 rounded border-2 transition-all flex items-center justify-center ${
                             record.is_received 
-                              ? 'bg-[#8EBF45] border-[#8EBF45] text-white' 
-                              : 'border-slate-300 hover:border-[#8EBF45]'
+                              ? 'bg-blue-600 border-blue-600 text-white' 
+                              : 'border-slate-300 hover:border-blue-500'
                           }`}
                         >
                           {record.is_received && <Check size={14} />}
@@ -290,8 +292,8 @@ const SuppliesRecord: React.FC<SuppliesRecordProps> = ({
                           onClick={() => toggleCheckbox(record.id, 'is_shipped')}
                           className={`w-6 h-6 rounded border-2 transition-all flex items-center justify-center ${
                             record.is_shipped 
-                              ? 'bg-[#8EBF45] border-[#8EBF45] text-white' 
-                              : 'border-slate-300 hover:border-[#8EBF45]'
+                              ? 'bg-blue-600 border-blue-600 text-white' 
+                              : 'border-slate-300 hover:border-blue-500'
                           }`}
                         >
                           {record.is_shipped && <Check size={14} />}

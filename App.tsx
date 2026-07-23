@@ -81,6 +81,58 @@ const DUMMY_EMPLOYEE_TASKS: EmployeeTask[] = [
   },
 ];
 
+class ViewErrorBoundary extends React.Component<
+  { children: React.ReactNode; resetView: () => void },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode; resetView: () => void }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error("View rendering error caught by ErrorBoundary:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 max-w-xl mx-auto my-12 bg-white rounded-2xl border border-red-200 shadow-xl text-center space-y-4">
+          <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+            ⚠️
+          </div>
+          <h2 className="text-xl font-bold text-slate-900">Module Display Issue Encountered</h2>
+          <p className="text-sm text-slate-600">
+            {this.state.error?.message || "An unexpected error occurred while loading this view."}
+          </p>
+          <div className="flex justify-center gap-3 pt-2">
+            <button
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                this.props.resetView();
+              }}
+              className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-sm text-sm"
+            >
+              Return to Operations Dashboard
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-5 py-2.5 bg-slate-200 text-slate-800 font-bold rounded-xl hover:bg-slate-300 transition-colors text-sm"
+            >
+              Reload System
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const App: React.FC = () => {
   // Check for public QR code scan or Iframe Mode
   const searchParams = new URLSearchParams(window.location.search);
@@ -649,7 +701,9 @@ const App: React.FC = () => {
         onLogout={handleLogout} 
       />
       <main className="p-4 sm:p-6 lg:p-8">
-        {renderView()}
+        <ViewErrorBoundary key={view} resetView={() => setView('received')}>
+          {renderView()}
+        </ViewErrorBoundary>
       </main>
       
       <Footer 

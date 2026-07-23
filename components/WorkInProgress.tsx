@@ -579,7 +579,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
 
               <div style="margin-top: 30px; border-top: 2px dashed #0D0D0D; padding-top: 15px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; color: #333; background: #fafafa; padding: 12px 16px; border-radius: 6px;">
                   <div>
-                      <div style="font-[#8EBF45]; font-weight: bold; font-size: 12px; margin-bottom: 4px; text-transform: uppercase;">✔ Digital Signature & Authorization</div>
+                      <div style={{ color: '#2563EB', fontWeight: 'bold', fontSize: '12px', marginBottom: '4px', textTransform: 'uppercase' }}>✔ Digital Signature & Authorization</div>
                       <div><strong>Authorized / Printed By:</strong> ${currentUser?.username || 'Authorized Operator'}</div>
                       <div><strong>Access Level:</strong> ${(currentUser?.role || 'Staff').toUpperCase()}</div>
                       <div><strong>Timestamp:</strong> ${new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</div>
@@ -888,7 +888,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                     <button onClick={() => setRecipeModalOpen(true)} className="flex items-center bg-[#0D0D0D] text-white px-4 py-2 rounded-lg shadow-md hover:bg-[#404040] transition-colors font-bold uppercase tracking-wide text-xs">
                         <PlusIcon /> <span className="ml-2">Manage SKUs</span>
                     </button>
-                    <button onClick={handleOpenWipModal} className="flex items-center bg-[#8EBF45] text-[#0D0D0D] px-6 py-2 rounded-lg shadow-md hover:bg-[#658C3E] hover:text-white transition-all transform active:scale-95 font-bold uppercase tracking-wide text-xs">
+                    <button onClick={handleOpenWipModal} className="flex items-center bg-blue-600 text-white px-6 py-2 rounded-lg shadow-md hover:bg-blue-700 transition-all transform active:scale-95 font-bold uppercase tracking-wide text-xs">
                         <PlusIcon /> <span className="ml-2">Start Production</span>
                     </button>
                 </div>
@@ -898,7 +898,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                 <input
                     type="text"
                     placeholder="Search by Product SKU..."
-                    className="block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45]"
+                    className="block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                 />
@@ -926,7 +926,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                                 <React.Fragment key={item.id}>
                                     <tr className={`hover:bg-gray-50 transition-colors ${isExpanded ? 'bg-blue-50/30' : ''} ${isRepair ? 'bg-amber-50 hover:bg-amber-100' : ''}`}>
                                         <td className="p-4 text-center">
-                                            <button onClick={() => setExpandedWipId(isExpanded ? null : item.id)} className="text-gray-400 hover:text-[#658C3E]">
+                                            <button onClick={() => setExpandedWipId(isExpanded ? null : item.id)} className="text-gray-400 hover:text-blue-600">
                                                 {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                                             </button>
                                         </td>
@@ -938,7 +938,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                                             {isRepair ? (
                                                 <span className="bg-amber-200 px-3 py-1 rounded-full text-amber-800 text-xs font-bold">IN REPAIR</span>
                                             ) : (
-                                                <span className="bg-[#A8BF75]/20 px-3 py-1 rounded-full text-[#658C3E] text-xs font-bold">{item.quantity}</span>
+                                                <span className="bg-blue-100 px-3 py-1 rounded-full text-blue-800 text-xs font-bold">{item.quantity}</span>
                                             )}
                                         </td>
                                         <td className="p-4 text-xs text-gray-600">
@@ -952,7 +952,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                                         <td className="p-4 text-right">
                                             <div className="flex items-center justify-end space-x-3">
                                                 {/* Always show Swap Serials */}
-                                                <button onClick={() => { setActiveWipItem(item as WIPItem); setIsManageSerialsModalOpen(true); }} className="text-[#658C3E] hover:text-[#8EBF45] text-xs font-semibold flex items-center">
+                                                <button onClick={() => { setActiveWipItem(item as WIPItem); setIsManageSerialsModalOpen(true); }} className="text-blue-600 hover:text-blue-800 text-xs font-semibold flex items-center">
                                                     <RefreshCw size={14} className="mr-1" /> Swap Serials
                                                 </button>
 
@@ -961,7 +961,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                                                         <ArrowRightIcon className="mr-1" size={14} /> Complete Repair
                                                     </button>
                                                 ) : (
-                                                    <button onClick={() => openFinishModal(item as WIPItem)} className="bg-[#8EBF45] text-[#0D0D0D] px-3 py-1.5 rounded-lg shadow-sm hover:bg-[#658C3E] hover:text-white transition-colors text-xs font-bold uppercase tracking-wide">
+                                                    <button onClick={() => openFinishModal(item as WIPItem)} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg shadow-sm hover:bg-blue-700 transition-colors text-xs font-bold uppercase tracking-wide">
                                                         Finish Batch
                                                     </button>
                                                 )}
@@ -1044,7 +1044,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                                     <div className="p-3 bg-white">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                             {(serials as string[]).map(sn => (
-                                                <div key={sn} className="flex justify-between items-center bg-slate-50 border p-2 rounded-md group hover:border-[#8EBF45] transition-colors">
+                                                <div key={sn} className="flex justify-between items-center bg-slate-50 border p-2 rounded-md group hover:border-blue-500 transition-colors">
                                                     <span className="font-mono text-xs text-slate-700">{sn}</span>
                                                     <button
                                                         onClick={() => handleInitiateReplacement(activeWipItem.id, goodId, sn)}
@@ -1060,7 +1060,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                             );
                         })}
                         <div className="flex justify-end pt-4">
-                            <button onClick={() => setIsManageSerialsModalOpen(false)} className="bg-[#0D0D0D] text-white px-6 py-2 rounded-lg font-bold">Done</button>
+                            <button onClick={() => setIsManageSerialsModalOpen(false)} className="bg-slate-900 text-white px-6 py-2 rounded-lg font-bold">Done</button>
                         </div>
                     </div>
                 </Modal>
@@ -1078,7 +1078,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                         </div>
                         <div className="relative mb-3">
                             <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                            <input type="text" placeholder="Search replacement serial..." className="w-full border rounded-lg py-2 pl-9 text-sm outline-none focus:ring-2 focus:ring-[#8EBF45]" value={replacementSearchTerm} onChange={(e) => setReplacementSearchTerm(e.target.value)} />
+                            <input type="text" placeholder="Search replacement serial..." className="w-full border rounded-lg py-2 pl-9 text-sm outline-none focus:ring-2 focus:ring-blue-500" value={replacementSearchTerm} onChange={(e) => setReplacementSearchTerm(e.target.value)} />
                         </div>
                         <div className="border rounded-lg overflow-hidden max-h-[50vh] overflow-y-auto">
                             <table className="w-full text-left text-sm">
@@ -1107,7 +1107,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                                                 <td className="p-3 font-mono text-slate-800">{sn}</td>
                                                 <td className="p-3 text-xs text-gray-500">{invoice || 'N/A'}</td>
                                                 <td className="p-3 text-right">
-                                                    <button onClick={() => handleConfirmReplacement(sn, batchId)} className="bg-[#8EBF45] text-[#0D0D0D] hover:bg-[#658C3E] hover:text-white px-3 py-1 rounded text-xs font-bold shadow-sm transition-colors">Select</button>
+                                                    <button onClick={() => handleConfirmReplacement(sn, batchId)} className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1 rounded text-xs font-bold shadow-sm transition-colors">Select</button>
                                                 </td>
                                             </tr>
                                         ));
@@ -1129,7 +1129,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                             <label className="block text-sm font-medium text-gray-700">Product SKU (Recipe)</label>
                             <button
                                 onClick={handleCreateRecipeFromDraft}
-                                className="text-[10px] text-[#658C3E] hover:text-[#8EBF45] font-bold flex items-center bg-white px-2 py-1 rounded border border-[#A8BF75] transition-colors"
+                                className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center bg-white px-2 py-1 rounded border border-blue-200 transition-colors"
                             >
                                 <PlusIcon /> New SKU
                             </button>
@@ -1138,7 +1138,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Quantity to Produce</label>
-                        <input type="number" value={quantity} onChange={e => setQuantity(Number(e.target.value))} min="1" className="w-full border rounded-md p-2 focus:ring-2 focus:ring-[#8EBF45] outline-none" />
+                        <input type="number" value={quantity} onChange={e => setQuantity(Number(e.target.value))} min="1" className="w-full border rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none" />
                     </div>
 
                     <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-2 mt-4">
@@ -1154,7 +1154,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                                 <div className="flex gap-2 mb-2">
                                     <button
                                         onClick={() => handleAutoSelectAcrossBatches(comp.itemName, comp.requiredSerialsCount, comp.pooledAvailable)}
-                                        className="text-[10px] bg-[#8EBF45]/20 text-[#0D0D0D] px-2 py-1 rounded hover:bg-[#8EBF45] font-bold disabled:opacity-50"
+                                        className="text-[10px] bg-blue-50 text-blue-700 px-2 py-1 rounded hover:bg-blue-600 hover:text-white font-bold disabled:opacity-50"
                                         disabled={comp.totalAvailableCount < comp.requiredSerialsCount}
                                     >
                                         Auto-Select FIFO
@@ -1178,7 +1178,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                                             </div>
                                             <select
                                                 multiple
-                                                className="w-full border rounded h-24 font-mono text-[10px] p-1 focus:ring-1 focus:ring-[#8EBF45] outline-none"
+                                                className="w-full border rounded h-24 font-mono text-[10px] p-1 focus:ring-1 focus:ring-blue-500 outline-none"
                                                 value={consumedSerials[batch.good.id] || []}
                                                 onChange={(e) => handleConsumedSerialsChange(batch.good.id, e.target.selectedOptions)}
                                             >
@@ -1194,11 +1194,11 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                     <div className="flex justify-end pt-4 border-t mt-4 gap-3">
                         <button
                             onClick={handlePrintBOM}
-                            className="bg-white text-[#0D0D0D] px-4 py-2.5 rounded-lg font-bold uppercase tracking-wide text-xs shadow-sm border border-gray-300 hover:bg-gray-50 flex items-center gap-2"
+                            className="bg-white text-slate-900 px-4 py-2.5 rounded-lg font-bold uppercase tracking-wide text-xs shadow-sm border border-gray-300 hover:bg-gray-50 flex items-center gap-2"
                         >
                             <Printer size={16} /> Print BOM
                         </button>
-                        <button onClick={handleStartWip} className="bg-[#8EBF45] text-[#0D0D0D] px-8 py-2.5 rounded-lg font-black uppercase tracking-widest text-sm shadow-md hover:bg-[#658C3E] hover:text-white transition-all transform active:scale-95">Confirm & Start Production</button>
+                        <button onClick={handleStartWip} className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-black uppercase tracking-widest text-sm shadow-md hover:bg-blue-700 transition-all transform active:scale-95">Confirm & Start Production</button>
                     </div>
                 </div>
             </Modal>
@@ -1209,7 +1209,7 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                     <div className="p-4 border rounded-lg bg-slate-50 border-slate-200">
                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><PlusIcon /> Create New SKU</h3>
                         <div className="space-y-4">
-                            <input type="text" placeholder="SKU Name (e.g. 12V 100Ah Battery Pack)" value={newRecipeName} onChange={e => setNewRecipeName(e.target.value)} className="w-full p-2.5 border rounded-md shadow-sm outline-none focus:ring-2 focus:ring-[#8EBF45]" />
+                            <input type="text" placeholder="SKU Name (e.g. 12V 100Ah Battery Pack)" value={newRecipeName} onChange={e => setNewRecipeName(e.target.value)} className="w-full p-2.5 border rounded-md shadow-sm outline-none focus:ring-2 focus:ring-blue-500" />
                             <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Components List</h4>
                             {newRecipeComponents.map((comp, index) => (
                                 <div key={index} className="flex gap-2 items-center bg-white p-2 border rounded-lg shadow-sm group">
@@ -1225,13 +1225,13 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                                             const updated = [...newRecipeComponents];
                                             updated[index].quantityPerUnit = Number(e.target.value);
                                             setNewRecipeComponents(updated);
-                                        }} className="w-full border rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-[#8EBF45]" />
+                                        }} className="w-full border rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
                                     </div>
                                     <button onClick={() => setNewRecipeComponents(newRecipeComponents.filter((_, i) => i !== index))} className="p-2 text-gray-300 hover:text-red-500 transition-colors"><TrashIcon /></button>
                                 </div>
                             ))}
-                            <button onClick={() => setNewRecipeComponents([...newRecipeComponents, { masterItemName: '', quantityPerUnit: 1 }])} className="text-[#658C3E] text-xs font-bold hover:underline py-1">+ Add Component Item</button>
-                            <div className="flex justify-end pt-2 border-t mt-2"><button onClick={handleSaveRecipe} className="bg-[#8EBF45] text-[#0D0D0D] px-6 py-2 rounded-lg font-bold shadow-md hover:bg-[#658C3E] hover:text-white transition-colors uppercase tracking-wide text-xs">Save Product SKU</button></div>
+                            <button onClick={() => setNewRecipeComponents([...newRecipeComponents, { masterItemName: '', quantityPerUnit: 1 }])} className="text-blue-600 text-xs font-bold hover:underline py-1">+ Add Component Item</button>
+                            <div className="flex justify-end pt-2 border-t mt-2"><button onClick={handleSaveRecipe} className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors uppercase tracking-wide text-xs">Save Product SKU</button></div>
                         </div>
                     </div>
 
@@ -1260,15 +1260,15 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
             {/* Finish Production Modal */}
             {itemToFinish && <Modal isOpen={isFinishModalOpen} onClose={() => setIsFinishModalOpen(false)} title={`Complete Production: ${getRecipeName(itemToFinish.recipeId)}`}>
                 <div className="space-y-4">
-                    <div className="bg-[#8EBF45]/10 p-4 rounded-lg border border-[#A8BF75]/50 text-[#0D0D0D] text-sm">
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 text-slate-900 text-sm">
                         <p className="font-bold mb-1">Ready for Release</p>
                         <p>You are moving <strong>{itemToFinish.quantity} units</strong> to Finished Goods. Serial numbers will be permanently mapped to Unit IDs.</p>
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Quality Control Remarks</label>
-                        <textarea value={finishFormData.qualityRemarks} onChange={e => setFinishFormData(p => ({ ...p, qualityRemarks: e.target.value }))} rows={4} placeholder="e.g. All checks passed, balancing verified, output 12.8V nominal..." className="w-full border rounded-md p-3 text-sm focus:ring-2 focus:ring-[#8EBF45] outline-none"></textarea>
+                        <textarea value={finishFormData.qualityRemarks} onChange={e => setFinishFormData(p => ({ ...p, qualityRemarks: e.target.value }))} rows={4} placeholder="e.g. All checks passed, balancing verified, output 12.8V nominal..." className="w-full border rounded-md p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
                     </div>
-                    <div className="flex justify-end pt-4"><button onClick={handleFinishProduction} className="bg-[#8EBF45] text-[#0D0D0D] px-8 py-2.5 rounded-lg font-black uppercase tracking-widest text-sm shadow-lg hover:bg-[#658C3E] hover:text-white transition-all transform active:scale-95 flex items-center gap-2"><ArrowRightIcon size={18} className="m-0" /> Release to Inventory</button></div>
+                    <div className="flex justify-end pt-4"><button onClick={handleFinishProduction} className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-black uppercase tracking-widest text-sm shadow-lg hover:bg-blue-700 transition-all transform active:scale-95 flex items-center gap-2"><ArrowRightIcon size={18} className="m-0" /> Release to Inventory</button></div>
                 </div>
             </Modal>}
         </div>

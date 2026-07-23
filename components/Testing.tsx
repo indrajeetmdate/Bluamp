@@ -67,18 +67,19 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
     // Filter eligible goods sorted by date desc
     const eligibleGoods = useMemo(() => {
         const term = searchTerm.toLowerCase();
-        return receivedGoods.filter(good => {
+        return (receivedGoods || []).filter(good => {
+            if (!good) return false;
             const cat = (good.category || '').trim().toLowerCase();
             const isTargetCategory = cat.includes('cell') || cat.includes('bms');
             const hasSerials = Array.isArray(good.serials) && good.serials.length > 0;
             return isTargetCategory && hasSerials;
         }).filter(good =>
-            good.name.toLowerCase().includes(term) ||
+            (good.name || '').toLowerCase().includes(term) ||
             (good.category || '').toLowerCase().includes(term) ||
             (good.makeModel || '').toLowerCase().includes(term) ||
             (good.supplier || '').toLowerCase().includes(term) ||
-            (good.serials || []).some(s => s.toLowerCase().includes(term))
-        ).sort((a, b) => b.timestamp - a.timestamp);
+            (good.serials || []).some(s => (s || '').toLowerCase().includes(term))
+        ).sort((a, b) => (b?.timestamp || 0) - (a?.timestamp || 0));
     }, [receivedGoods, searchTerm]);
 
     // Update Legend when config changes
@@ -618,7 +619,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                     {selectedSerials.size > 0 && (
                         <button
                             onClick={handleSendToProductionClick}
-                            className="flex items-center bg-[#8EBF45] text-[#0D0D0D] hover:text-white px-4 py-2 rounded-lg shadow-md hover:bg-[#658C3E] transition-colors animate-fade-in font-bold uppercase tracking-wide text-xs"
+                            className="flex items-center bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition-colors animate-fade-in font-bold uppercase tracking-wide text-xs"
                         >
                             <ArrowRightIcon size={16} />
                             <span className="ml-2">Send to Production ({selectedSerials.size})</span>
@@ -626,7 +627,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                     )}
                     <button
                         onClick={handleExportClick}
-                        className="flex items-center bg-white border border-[#A8BF75] text-[#658C3E] px-4 py-2 rounded-lg shadow-sm hover:bg-[#A8BF75]/10 transition-colors font-bold uppercase tracking-wide text-xs"
+                        className="flex items-center bg-white border border-blue-200 text-blue-700 px-4 py-2 rounded-lg shadow-sm hover:bg-blue-50 transition-colors font-bold uppercase tracking-wide text-xs"
                         title={selectedBatch ? `Export results for ${selectedBatch.name}` : "Export all test results"}
                     >
                         <Download size={16} />
@@ -634,7 +635,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                     </button>
                     <button
                         onClick={handleImportClick}
-                        className="flex items-center bg-[#8EBF45] text-[#0D0D0D] px-4 py-2 rounded-lg shadow-md hover:bg-[#658C3E] hover:text-white transition-colors font-bold uppercase tracking-wide text-xs"
+                        className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition-colors font-bold uppercase tracking-wide text-xs"
                     >
                         <ImportIcon />
                         <span className="ml-2">Import Results CSV</span>
@@ -655,7 +656,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                         <input
                             type="text"
                             placeholder="Search batches by Name, Serial #, Supplier, Make/Model..."
-                            className="block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#8EBF45]"
+                            className="block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
@@ -695,11 +696,11 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                             <span>{testedCount} / {totalSerials}</span>
                                         </div>
                                         <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                            <div className="bg-[#8EBF45] h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                                            <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
                                         </div>
                                     </div>
                                     <div className="mt-4 flex justify-end">
-                                        <button className="text-[#658C3E] text-sm font-medium hover:underline flex items-center">
+                                        <button className="text-blue-600 text-sm font-medium hover:underline flex items-center">
                                             Test Batch <PencilIcon />
                                         </button>
                                     </div>
@@ -732,7 +733,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                 <input
                                     type="text"
                                     placeholder="https://drive..."
-                                    className="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-[#8EBF45] outline-none w-48 text-sm"
+                                    className="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 outline-none w-48 text-sm"
                                     value={selectedBatch.testReportLink || ''}
                                     onChange={(e) => handleReportLinkChange(e.target.value)}
                                 />
@@ -742,7 +743,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                 <input
                                     type="text"
                                     placeholder="e.g. Rack A-1"
-                                    className="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-[#8EBF45] outline-none w-32 text-sm"
+                                    className="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 outline-none w-32 text-sm"
                                     value={batchLocation}
                                     onChange={(e) => setBatchLocation(e.target.value)}
                                 />
@@ -790,7 +791,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                 <input
                                     type="text"
                                     placeholder="Serials..."
-                                    className="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-[#8EBF45] outline-none w-32 text-sm"
+                                    className="p-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 outline-none w-32 text-sm"
                                     value={serialSearchTerm}
                                     onChange={e => setSerialSearchTerm(e.target.value)}
                                 />
@@ -803,12 +804,12 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                         <div className="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="font-semibold text-slate-700 flex items-center">
-                                    <span className="bg-[#8EBF45] text-[#0D0D0D] text-xs px-2 py-1 rounded mr-2 font-bold">New</span>
+                                    <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded mr-2 font-bold">New</span>
                                     Cell Grading System
                                 </h3>
                                 <button
                                     onClick={() => setShowGrading(!showGrading)}
-                                    className="text-xs text-[#658C3E] hover:underline font-bold"
+                                    className="text-xs text-blue-600 hover:underline font-bold"
                                 >
                                     {showGrading ? 'Hide Grading Tools' : 'Show Grading Tools'}
                                 </button>
@@ -879,7 +880,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                     <div className="mt-4 flex justify-end">
                                         <button
                                             onClick={handleApplyAndSave}
-                                            className="bg-[#8EBF45] text-[#0D0D0D] px-6 py-2 rounded-lg text-xs font-black uppercase tracking-wide hover:bg-[#658C3E] hover:text-white shadow-sm transition-colors flex items-center"
+                                            className="bg-blue-600 text-white px-6 py-2 rounded-lg text-xs font-black uppercase tracking-wide hover:bg-blue-700 shadow-sm transition-colors flex items-center"
                                         >
                                             <Save size={16} className="mr-2" />
                                             Save Grading & Batch Info
@@ -895,7 +896,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="p-3 border-b font-semibold text-gray-600 w-10 text-center">
-                                        <input type="checkbox" onChange={handleSelectAll} checked={processedSerials.length > 0 && selectedSerials.size === processedSerials.length} className="rounded border-gray-300 focus:ring-[#8EBF45] h-4 w-4 text-[#658C3E] cursor-pointer" />
+                                        <input type="checkbox" onChange={handleSelectAll} checked={processedSerials.length > 0 && selectedSerials.size === processedSerials.length} className="rounded border-gray-300 focus:ring-blue-500 h-4 w-4 text-blue-600 cursor-pointer" />
                                     </th>
                                     <th
                                         className="p-3 border-b font-semibold text-gray-600 w-16 text-center cursor-pointer hover:bg-gray-100 group select-none"
@@ -931,7 +932,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                                     <select
                                                         value={gradeFilter}
                                                         onChange={(e) => setGradeFilter(e.target.value)}
-                                                        className="text-[10px] border border-gray-300 rounded p-0.5 font-normal bg-white focus:outline-none focus:border-[#8EBF45] w-20"
+                                                        className="text-[10px] border border-gray-300 rounded p-0.5 font-normal bg-white focus:outline-none focus:border-blue-500 w-20"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
                                                         <option value="all">All</option>
@@ -958,13 +959,13 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                         : (result.passed !== undefined);
 
                                     return (
-                                        <tr key={serial} className={`hover:bg-gray-50 transition-colors ${selectedSerials.has(serial) ? 'bg-[#8EBF45]/20' : ''}`}>
+                                        <tr key={serial} className={`hover:bg-gray-50 transition-colors ${selectedSerials.has(serial) ? 'bg-blue-50' : ''}`}>
                                             <td className="p-3 border-b text-center">
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedSerials.has(serial)}
                                                     onChange={() => handleToggleSelect(serial)}
-                                                    className="rounded border-gray-300 focus:ring-[#8EBF45] h-4 w-4 text-[#658C3E] cursor-pointer"
+                                                    className="rounded border-gray-300 focus:ring-blue-500 h-4 w-4 text-blue-600 cursor-pointer"
                                                 />
                                             </td>
                                             <td className="p-3 border-b text-center text-gray-500 text-sm">{index}</td>
@@ -975,7 +976,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                                         <input
                                                             type="number"
                                                             step="0.01"
-                                                            className="w-full p-1 border rounded focus:ring-2 focus:ring-[#8EBF45]"
+                                                            className="w-full p-1 border rounded focus:ring-2 focus:ring-blue-500"
                                                             value={result.voltage ?? ''}
                                                             onChange={(e) => handleInputChange(serial, { voltage: parseFloat(e.target.value) })}
                                                         />
@@ -984,7 +985,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                                         <input
                                                             type="number"
                                                             step="0.01"
-                                                            className="w-full p-1 border rounded focus:ring-2 focus:ring-[#8EBF45]"
+                                                            className="w-full p-1 border rounded focus:ring-2 focus:ring-blue-500"
                                                             value={result.resistance ?? ''}
                                                             onChange={(e) => handleInputChange(serial, { resistance: parseFloat(e.target.value) })}
                                                         />
@@ -993,7 +994,7 @@ const Testing: React.FC<TestingProps> = ({ receivedGoods, testResults, setTestRe
                                                         <input
                                                             type="number"
                                                             step="0.01"
-                                                            className="w-full p-1 border rounded focus:ring-2 focus:ring-[#8EBF45]"
+                                                            className="w-full p-1 border rounded focus:ring-2 focus:ring-blue-500"
                                                             value={result.capacity ?? ''}
                                                             onChange={(e) => handleInputChange(serial, { capacity: parseFloat(e.target.value) })}
                                                         />

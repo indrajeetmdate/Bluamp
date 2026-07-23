@@ -50,7 +50,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onDel
         <h1 className="text-2xl font-bold text-gray-800">User Management</h1>
         <button
           onClick={() => { setIsModalOpen(true); setError(null); setUsername(''); setPassword(''); setRole('user'); }}
-          className="flex items-center bg-[#8EBF45] text-[#0D0D0D] px-4 py-2 rounded-lg shadow-md hover:bg-[#658C3E] hover:text-white transition-colors font-black uppercase tracking-wide text-xs"
+          className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition-colors font-black uppercase tracking-wide text-xs"
         >
           <PlusIcon />
           <span className="ml-2">Add New User</span>
@@ -71,7 +71,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onDel
               <tr key={user.username} className="hover:bg-gray-50">
                 <td className="p-4">{user.username}</td>
                 <td className="p-4">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-[#8EBF45]/20 text-[#658C3E]' : user.role === 'billing' ? 'bg-blue-100 text-blue-800' : user.role === 'dashboard_user' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-blue-100 text-blue-800' : user.role === 'billing' ? 'bg-indigo-100 text-indigo-800' : user.role === 'dashboard_user' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
                         {user.role === 'admin' ? 'Director Admin' : user.role === 'billing' ? 'Billing & Operations' : user.role === 'dashboard_user' ? 'Dashboard Data Employee' : 'General Employee'}
                     </span>
                 </td>
@@ -139,7 +139,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onAddUser, onDel
             </select>
           </div>
           <div className="flex justify-end pt-4">
-            <button type="submit" className="bg-[#8EBF45] text-[#0D0D0D] px-4 py-2 rounded-lg hover:bg-[#658C3E] hover:text-white font-bold uppercase tracking-wide text-xs">Create User</button>
+            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-bold uppercase tracking-wide text-xs">Create User</button>
           </div>
         </form>
       </Modal>

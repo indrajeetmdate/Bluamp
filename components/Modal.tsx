@@ -23,16 +23,16 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
   };
 
   return (
-    <div className={`fixed inset-0 bg-[#0D0D0D]/60 backdrop-blur-sm ${zIndex} flex justify-center items-center p-4 transition-all duration-300`} onClick={() => !persistent && onClose()}>
+    <div className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm ${zIndex} flex justify-center items-center p-4 transition-all duration-300`} onClick={() => !persistent && onClose()}>
       <div
         className={`bg-white rounded-3xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.4)] relative w-full ${sizeClasses[size]} overflow-hidden animate-fade-in-scale`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center px-8 py-6 bg-[#F9FAFB] border-b border-slate-100">
-          <h2 className="text-xl font-bold text-[#0D0D0D] tracking-tight font-brand">{title}</h2>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight font-brand">{title}</h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-[#0D0D0D] hover:bg-slate-200 transition-all rounded-full p-2"
+            className="text-slate-400 hover:text-slate-900 hover:bg-slate-200 transition-all rounded-full p-2"
           >
             <XIcon />
           </button>

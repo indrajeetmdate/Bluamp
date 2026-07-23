@@ -137,7 +137,7 @@ export async function buildSlackTaskDigestPayload(appUrl: string, requestedUser?
     const empTasks = tasksByEmployee[emp];
     let taskListText = `*👤 Employee: ${emp}* (${empTasks.length} pending)\n`;
 
-    empTasks.forEach((t, idx) => {
+    empTasks.forEach((t) => {
       const badge = getDueDateBadge(t.due_date);
       taskListText += `• ${badge.emoji} *${t.title}* — _${badge.label}_`;
       if (t.description) {
@@ -155,7 +155,6 @@ export async function buildSlackTaskDigestPayload(appUrl: string, requestedUser?
     });
   });
 
-  // Action button to open tasks app on phone/desktop
   const tasksAppUrl = `${appUrl}/?view=employee_tasks`;
   blocks.push({ type: 'divider' });
   blocks.push({
@@ -180,8 +179,35 @@ export async function buildSlackTaskDigestPayload(appUrl: string, requestedUser?
   };
 }
 
+function parseSlackPayload(req: any) {
+  let body = req.body;
+
+  if (Buffer.isBuffer(body)) {
+    body = body.toString('utf-8');
+  }
+
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      const params = new URLSearchParams(body);
+      body = Object.fromEntries(params.entries());
+    }
+  }
+
+  if (!body || typeof body !== 'object') {
+    body = req.query || {};
+  }
+
+  const command = body.command || '';
+  const text = (body.text || body.event?.text || '').trim();
+  const responseUrl = body.response_url || body.event?.response_url || '';
+  const webhookUrl = body.webhook_url || req.query?.webhook_url;
+
+  return { body, command, text, responseUrl, webhookUrl };
+}
+
 export default async function handler(req: any, res: any) {
-  // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -191,19 +217,27 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const appUrl = process.env.VITE_APP_URL || process.env.APP_URL || 'https://bluamp.vercel.app';
+    const { command, text, responseUrl, webhookUrl } = parseSlackPayload(req);
+    const appUrl = process.env.VITE_APP_URL || process.env.APP_URL || 'https://blueamp.cnergy.co.in';
     const defaultWebhookUrl = process.env.SLACK_WEBHOOK_URL_TO_DO || process.env.SLACK_WEBHOOK_URL || process.env.SLACK_TASKS_WEBHOOK_URL;
 
-    // Check if called with custom webhook URL from request body or query
-    const targetWebhookUrl = req.body?.webhook_url || req.query?.webhook_url || defaultWebhookUrl;
-    const requestedUser = req.body?.user || req.query?.user;
+    const targetWebhookUrl = webhookUrl || defaultWebhookUrl;
+    const requestedUser = text || req.query?.user;
 
     const payload = await buildSlackTaskDigestPayload(appUrl, requestedUser);
 
-    // If request contains response_url from Slack slash command (e.g. /tasks)
-    const responseUrl = req.body?.response_url;
+    if (responseUrl) {
+      await fetch(responseUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, response_type: 'in_channel' })
+      });
 
-    if (targetWebhookUrl) {
+      return res.status(200).json({
+        response_type: "in_channel",
+        text: "Broadcasted task digest to channel!"
+      });
+    } else if (targetWebhookUrl) {
       const slackRes = await fetch(targetWebhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -220,16 +254,7 @@ export default async function handler(req: any, res: any) {
         message: 'Daily task digest successfully broadcasted to Slack!',
         timestamp: new Date().toISOString()
       });
-    } else if (responseUrl) {
-      await fetch(responseUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, response_type: 'in_channel' })
-      });
-
-      return res.status(200).send('OK');
     } else {
-      // If no webhook URL is set in env vars yet, return the generated JSON payload so caller can view/test it
       return res.status(200).json({
         success: true,
         warning: 'No SLACK_WEBHOOK_URL configured in environment variables.',
@@ -239,6 +264,6 @@ export default async function handler(req: any, res: any) {
     }
   } catch (err: any) {
     console.error('[Slack Daily Tasks] Error:', err);
-    return res.status(500).json({ error: err.message || 'Internal Server Error' });
+    return res.status(200).json({ error: err.message || 'Internal Server Error' });
   }
 }

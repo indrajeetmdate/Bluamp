@@ -1,92 +1,116 @@
 # 🚀 Complete Slack Setup & Integration Guide
 **Bluamp Plant OS**
 
-This guide provides step-by-step instructions for setting up Slack integration for:
-1. **Automated Daily 11:30 AM IST Employee Task Digest** (Incoming Webhook)
-2. **Mobile Slack Commands (`/tasks` / `/todo`)** (Interactive Slash Commands)
-3. **AI Invoice & Quotation Assistant via Slack** (Gemini AI Integration)
+This guide provides step-by-step instructions for setting up your Slack App for:
+1. **AI Invoice & Quotation Assistant (`/doc` / `/make-invoice` / `/make_invoice` / `/invoice`)**
+2. **Automated Daily 11:30 AM IST Employee Task Digest** (Incoming Webhook)
+3. **Mobile Slack Commands (`/tasks` / `/todo`)**
 
 ---
 
-## Step 1: Create a Slack App
+## ⚡ Method 1: Instant Setup via App Manifest (Recommended — Takes 30 Seconds)
 
-1. Go to [https://api.slack.com/apps](https://api.slack.com/apps).
-2. Click **Create New App** → Choose **From scratch**.
-3. Set **App Name**: `Bluamp Plant OS`
-4. Select your **Slack Workspace** and click **Create App**.
+1. Go to **[https://api.slack.com/apps](https://api.slack.com/apps)** and log into your Slack workspace.
+2. Click **Create New App** → Select **From an app manifest**.
+3. Choose your **Workspace** and click **Next**.
+4. Paste the following Manifest JSON into the editor:
+
+```json
+{
+    "_metadata": {
+        "major_version": 1,
+        "minor_version": 1
+    },
+    "display_information": {
+        "name": "Bluamp Plant OS",
+        "description": "Bluamp Energies Plant Management, Task Broadcasts & AI Invoice Assistant",
+        "background_color": "#1e3a8a"
+    },
+    "features": {
+        "incoming_webhooks": {
+            "single_team_settings": {
+                "active": true
+            }
+        },
+        "slash_commands": [
+            {
+                "command": "/doc",
+                "url": "https://blueamp.cnergy.co.in/api/slack-invoice",
+                "description": "Create an AI draft invoice/quotation",
+                "usage_hint": "e.g. Create quotation for ACME Corp, 5x 48V 100Ah Batteries",
+                "should_escape": false
+            },
+            {
+                "command": "/make-invoice",
+                "url": "https://blueamp.cnergy.co.in/api/slack-invoice",
+                "description": "Create an AI draft invoice/quotation",
+                "usage_hint": "e.g. Create quotation for ACME Corp, 5x 48V 100Ah Batteries",
+                "should_escape": false
+            },
+            {
+                "command": "/make_invoice",
+                "url": "https://blueamp.cnergy.co.in/api/slack-invoice",
+                "description": "Create an AI draft invoice/quotation",
+                "usage_hint": "e.g. Create quotation for ACME Corp, 5x 48V 100Ah Batteries",
+                "should_escape": false
+            },
+            {
+                "command": "/invoice",
+                "url": "https://blueamp.cnergy.co.in/api/slack-invoice",
+                "description": "Create an AI draft invoice/quotation",
+                "usage_hint": "e.g. Create invoice for Tata Power, 10x 12V 200Ah cells",
+                "should_escape": false
+            },
+            {
+                "command": "/tasks",
+                "url": "https://blueamp.cnergy.co.in/api/slack-daily-tasks",
+                "description": "View active factory employee tasks digest",
+                "usage_hint": "[optional username]",
+                "should_escape": false
+            }
+        ]
+    },
+    "oauth_config": {
+        "scopes": {
+            "bot": [
+                "incoming-webhook",
+                "commands"
+            ]
+        }
+    },
+    "settings": {
+        "org_deploy_enabled": false,
+        "socket_mode_enabled": false,
+        "token_rotation_enabled": false
+    }
+}
+```
+
+5. Click **Next** → Review summary → Click **Create**.
+6. Click **Install to Workspace** and select your desired default channel (e.g., `#factory-tasks` or `#general`).
+7. Done! All commands (`/doc`, `/make-invoice`, `/make_invoice`, `/invoice`, `/tasks`) are active.
 
 ---
 
-## Step 2: Enable Incoming Webhook (For Daily 11:30 AM Task Digest)
+## 🛠️ Resolving "The app did not respond" Error in Slack
 
-This allows Vercel Cron to send daily task digests automatically to your team channel at 11:30 AM IST.
+If Slack reports: *"failed because the app did not respond"*:
 
-1. In your Slack App settings, select **Incoming Webhooks** from the left menu.
-2. Toggle the switch to **On**.
-3. Click **Add New Webhook to Workspace** at the bottom.
-4. Choose the channel where daily tasks should be posted (e.g., `#factory-tasks` or `#general`).
-5. Click **Allow**.
-6. Copy the generated **Webhook URL** (starts with `https://hooks.slack.com/services/...`).
+### 1. Cause
+Slack requires any serverless endpoint handling slash commands to return an **HTTP 200 response within 3000ms (3 seconds)**. If Vercel functions parse URL-encoded payloads standard to Slack incorrectly or exceed 3 seconds, Slack marks the request as failed.
 
----
-
-## Step 3: Add Environment Variables in Vercel
-
-1. Log into your [Vercel Dashboard](https://vercel.com).
-2. Select your project (`DC_Inventory_190526` / `plant-inventory-deploy`).
-3. Go to **Settings** → **Environment Variables**.
-4. Add the following environment variable:
-   * **Key**: `SLACK_WEBHOOK_URL`
-   * **Value**: *(Paste the Webhook URL copied from Step 2)*
-   * **Environments**: Production, Preview, Development
-5. Click **Save**.
-6. Redeploy the project on Vercel so the cron job picks up the new key.
+### 2. Resolution Applied in App Backend
+Both `api/slack-invoice.ts` and `api/slack-daily-tasks.ts` have been updated with:
+* **Universal Payload Parser**: Parses URL-encoded form data (`application/x-www-form-urlencoded`), raw JSON, and query parameters reliably.
+* **Instant Acknowledgment (< 100ms)**: Uses `@vercel/functions` `waitUntil()` to immediately send HTTP 200 to Slack, preventing timeout errors while AI background processing runs asynchronously.
+* **Helpful Fallback Guidance**: If a user runs `/doc` or `/make-invoice` with no text prompt, it returns instant ephemeral usage instructions directly in Slack.
 
 ---
 
-## Step 4: Configure Slash Commands (Optional - For Mobile Phone Usage)
+## 📍 Summary of API Endpoints
 
-Employees using Slack on their phone can type `/tasks` to see their pending tasks instantly.
-
-1. In Slack App settings, click **Slash Commands** → **Create New Command**.
-2. Fill out the details:
-   * **Command**: `/tasks`
-   * **Request URL**: `https://bluamp.vercel.app/api/slack-daily-tasks`
-   * **Short Description**: View pending employee tasks
-   * **Usage Hint**: [optional username]
-3. Click **Save**.
-
----
-
-## Step 5: Configure AI Invoice Assistant (Optional)
-
-To enable creating invoice/quotation drafts directly from Slack:
-
-1. In Slack App settings, click **Slash Commands** → **Create New Command**.
-   * **Command**: `/invoice`
-   * **Request URL**: `https://bluamp.vercel.app/api/slack-invoice`
-   * **Short Description**: Generate AI invoice draft
-   * **Usage Hint**: e.g., "Create quotation for ACME Corp, 5x 48V 100Ah Batteries"
-2. Click **Save**.
-
----
-
-## Step 6: Test & Verify
-
-### 1. Test 11:30 AM Task Digest Manually
-* Open the Bluamp Web/Mobile App → Navigate to **Employee To-Do Management**.
-* Click the **📢 Send Slack Digest** button in the header bar.
-* Check your Slack channel to verify the message appears with priority badge colors and action buttons.
-
-### 2. Automated Daily Schedule Verification
-* The cron schedule in `vercel.json` (`"schedule": "0 6 * * *"`) will run automatically every day at **6:00 AM UTC (11:30 AM IST)**.
-* Check Vercel → **Logs** / **Cron Jobs** to verify executions.
-
----
-
-## Summary of URL Endpoints
-| Feature | Endpoint URL | Trigger |
-| :--- | :--- | :--- |
-| **Daily 11:30 AM Task Digest** | `https://bluamp.vercel.app/api/slack-daily-tasks` | Vercel Cron at 11:30 AM IST / Webhook |
-| **On-Demand Slash Command** | `/tasks` → `.../api/slack-daily-tasks` | User types `/tasks` in Slack mobile |
-| **AI Invoice Generator** | `/invoice` → `.../api/slack-invoice` | User types `/invoice` in Slack |
+| Feature | Slack Slash Commands | Endpoint URL | Description |
+| :--- | :--- | :--- | :--- |
+| **AI Invoice Assistant** | `/doc`<br>`/make-invoice`<br>`/make_invoice`<br>`/invoice` | `https://blueamp.cnergy.co.in/api/slack-invoice` | Generates pre-filled AI invoice draft |
+| **Task Broadcast Digest** | `/tasks`<br>`/todo` | `https://blueamp.cnergy.co.in/api/slack-daily-tasks` | Fetches active employee pending tasks |
+| **Daily Scheduled Digest** | *(Automated)* | `https://blueamp.cnergy.co.in/api/slack-daily-tasks` | Vercel Cron trigger at 11:30 AM IST |

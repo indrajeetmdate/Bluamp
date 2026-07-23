@@ -84,7 +84,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const appUrl = process.env.VITE_APP_URL || process.env.APP_URL || 'https://bluamp.vercel.app';
+    const appUrl = process.env.VITE_APP_URL || process.env.APP_URL || 'https://blueamp.cnergy.co.in';
     const personalWebhookUrl = process.env.SLACK_WEBHOOK_URL_PERSONAL || 
                                process.env.SLACK_WEBHOOK_URL_TO_DO || 
                                process.env.SLACK_WEBHOOK_URL;

@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   } else {
     // Fallback: Check Referer/Origin to at least block non-browser abuse
     const origin = req.headers['origin'] || req.headers['referer'] || '';
-    const allowedOrigins = ['https://bluamp.vercel.app', 'http://localhost:3000', 'http://localhost:5173'];
+    const allowedOrigins = ['https://blueamp.cnergy.co.in', 'https://bluamp.vercel.app', 'http://localhost:3000', 'http://localhost:5173'];
     if (!allowedOrigins.some(allowed => origin.startsWith(allowed))) {
       return res.status(403).json({ message: 'Forbidden: Unauthorized origin' });
     }

@@ -205,9 +205,10 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
         checkImport();
     }, []);
 
-    const filteredGoods = receivedGoods.filter(good => {
+    const filteredGoods = (receivedGoods || []).filter(good => {
+        if (!good) return false;
         const term = searchTerm.toLowerCase();
-        const matchesSearch = good.name.toLowerCase().includes(term) ||
+        const matchesSearch = (good.name || '').toLowerCase().includes(term) ||
             (good.category || '').toLowerCase().includes(term) ||
             (good.makeModel || '').toLowerCase().includes(term) ||
             (good.invoiceNumber || '').toLowerCase().includes(term) ||
@@ -218,7 +219,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
         const matchesNotes = !filterNotes || (good.notes && good.notes !== 'actual physical qty = ');
 
         return matchesSearch && matchesCategory && matchesNotes;
-    }).sort((a, b) => b.timestamp - a.timestamp);
+    }).sort((a, b) => (b?.timestamp || 0) - (a?.timestamp || 0));
 
     const handleEditClick = (good: ReceivedGood) => {
         setEditingGood(good);
@@ -527,10 +528,10 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                     <p className="text-sm text-[#404040] mt-1 font-medium">Manage raw materials and tracked components.</p>
                 </div>
                 <div className="flex items-center space-x-3">
-                    <button onClick={handleCreateNew} className="flex items-center bg-[#8EBF45] text-[#0D0D0D] px-6 py-2.5 rounded-xl shadow-lg hover:bg-[#658C3E] hover:text-white transition-all transform active:scale-95 font-bold uppercase tracking-widest text-xs">
+                    <button onClick={handleCreateNew} className="flex items-center bg-blue-600 text-white px-6 py-2.5 rounded-xl shadow-lg hover:bg-blue-700 transition-all transform active:scale-95 font-bold uppercase tracking-widest text-xs">
                         <PlusIcon /> <span className="ml-2">Register Item</span>
                     </button>
-                    <button onClick={() => fileInputRef.current?.click()} className="flex items-center bg-white border-2 border-[#A8BF75] text-[#658C3E] px-4 py-2 rounded-xl hover:bg-[#A8BF75]/10 transition-colors text-xs font-bold uppercase tracking-widest">
+                    <button onClick={() => fileInputRef.current?.click()} className="flex items-center bg-white border-2 border-blue-200 text-blue-700 px-4 py-2 rounded-xl hover:bg-blue-50 transition-colors text-xs font-bold uppercase tracking-widest">
                         <ImportIcon className="mr-2" size={14} /> Import
                     </button>
                     <button onClick={handleExportCsv} className="flex items-center bg-white border-2 border-slate-300 text-slate-600 px-4 py-2 rounded-xl hover:bg-slate-50 transition-colors text-xs font-bold uppercase tracking-widest">
@@ -541,13 +542,13 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
             </div>
 
             <div className="mb-4 relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-[#8EBF45] transition-colors">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-600 transition-colors">
                     <SearchIcon className="h-5 w-5" />
                 </div>
                 <input
                     type="text"
                     placeholder="Filter by name, make, supplier or invoice..."
-                    className="block w-full p-4 pl-12 border-2 border-slate-200 rounded-2xl shadow-sm focus:outline-none focus:border-[#8EBF45] focus:ring-4 focus:ring-[#8EBF45]/10 transition-all text-[#404040]"
+                    className="block w-full p-4 pl-12 border-2 border-slate-200 rounded-2xl shadow-sm focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all text-[#404040]"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                 />
@@ -565,7 +566,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                     <button
                         key={cat}
                         onClick={() => setSelectedCategory(cat)}
-                        className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${selectedCategory === cat ? 'bg-[#8EBF45] text-[#0D0D0D] border-[#8EBF45] shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                        className={`px-4 py-1.5 text-xs font-bold rounded-full border transition-all ${selectedCategory === cat ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                     >
                         {cat}
                     </button>
@@ -633,7 +634,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
 
                             <div className="flex-1">
                                 <h3 className="font-bold text-xl text-[#0D0D0D] leading-tight mb-1">{good.name}</h3>
-                                <p className="text-xs text-[#658C3E] font-black uppercase tracking-widest">{good.makeModel}</p>
+                                <p className="text-xs text-blue-600 font-black uppercase tracking-widest">{good.makeModel}</p>
                                 <div className="mt-4 flex justify-between items-end border-t border-slate-50 pt-4">
                                     <div>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Supplier</p>
@@ -641,7 +642,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                                     </div>
                                     <div className="text-right">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Available</p>
-                                        <p className={`text-2xl font-black ${good.quantity === 0 ? 'text-red-500' : 'text-[#8EBF45]'}`}>{good.quantity}</p>
+                                        <p className={`text-2xl font-black ${good.quantity === 0 ? 'text-red-500' : 'text-blue-600'}`}>{good.quantity}</p>
                                     </div>
                                 </div>
                             </div>
@@ -650,11 +651,11 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                                 <div>
                                     <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
                                         <span>{isTracked ? 'Tracked Serials' : 'Stock Level'}</span>
-                                        <span className="text-[#658C3E]">{isTracked ? `${good.serials.length} / ${good.quantity}` : `${good.quantity} units`}</span>
+                                        <span className="text-blue-600">{isTracked ? `${good.serials.length} / ${good.quantity}` : `${good.quantity} units`}</span>
                                     </div>
                                     {isTracked && (
                                         <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200">
-                                            <div className={`h-full transition-all duration-500 rounded-full ${progress === 100 ? 'bg-[#8EBF45]' : 'bg-[#658C3E]'}`} style={{ width: `${progress}%` }}></div>
+                                            <div className={`h-full transition-all duration-500 rounded-full ${progress === 100 ? 'bg-blue-600' : 'bg-blue-500'}`} style={{ width: `${progress}%` }}></div>
                                         </div>
                                     )}
                                     {!isTracked && (
@@ -664,7 +665,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                                     )}
                                 </div>
                                 <div className="flex gap-2 justify-end">
-                                    <button onClick={() => handleEditClick(good)} className="p-2.5 text-slate-400 hover:text-[#8EBF45] hover:bg-[#8EBF45]/5 rounded-xl transition-all"><PencilIcon /></button>
+                                    <button onClick={() => handleEditClick(good)} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"><PencilIcon /></button>
                                 </div>
                             </div>
                         </div>
@@ -677,7 +678,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
                             <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Item Name</label>
-                            <input type="text" list="item-names" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none font-semibold text-sm" required placeholder="e.g. 32700 6000mAh Cell" />
+                            <input type="text" list="item-names" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-sm" required placeholder="e.g. 32700 6000mAh Cell" />
                             <datalist id="item-names">
                                 {Array.from(new Set(receivedGoods.map(g => g.name))).map(n => <option key={n} value={n} />)}
                             </datalist>
@@ -685,7 +686,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
 
                         <div>
                             <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Category</label>
-                            <input type="text" list="categories" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm" required />
+                            <input type="text" list="categories" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm" required />
                             <datalist id="categories">
                                 {CATEGORIES.map(c => <option key={c} value={c} />)}
                             </datalist>
@@ -693,7 +694,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
 
                         <div>
                             <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Make / Model</label>
-                            <input type="text" value={formData.makeModel} onChange={e => setFormData({ ...formData, makeModel: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm" placeholder="e.g. EVE" />
+                            <input type="text" value={formData.makeModel} onChange={e => setFormData({ ...formData, makeModel: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="e.g. EVE" />
                         </div>
 
                         <div>
@@ -701,27 +702,27 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                             <select 
                                 value={formData.supplier} 
                                 onChange={e => handleSupplierChange(e.target.value)} 
-                                className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm bg-white"
+                                className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white"
                             >
                                 <option value="">Select Supplier</option>
                                 {companyProfiles.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                                <option value="ADD_NEW" className="font-bold text-[#658C3E]">+ Add New...</option>
+                                <option value="ADD_NEW" className="font-bold text-blue-600">+ Add New...</option>
                             </select>
                         </div>
 
                         <div>
                             <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Invoice Number</label>
-                            <input type="text" value={formData.invoiceNumber} onChange={e => setFormData({ ...formData, invoiceNumber: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm" />
+                            <input type="text" value={formData.invoiceNumber} onChange={e => setFormData({ ...formData, invoiceNumber: e.target.value })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
                         </div>
 
                         <div>
                             <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Quantity</label>
-                            <input type="number" min="0" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: parseInt(e.target.value) })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm font-bold" required />
+                            <input type="number" min="0" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: parseInt(e.target.value) })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-bold" required />
                         </div>
 
                         <div>
                             <label className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Status</label>
-                            <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm bg-white">
+                            <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })} className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-white">
                                 {Object.entries(statusInfo).map(([key, info]) => (
                                     <option key={key} value={key}>{info.text}</option>
                                 ))}
@@ -735,7 +736,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                         <textarea
                             value={formData.notes ?? 'actual physical qty = '}
                             onChange={e => setFormData({ ...formData, notes: e.target.value })}
-                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-[#8EBF45] outline-none text-sm resize-none"
+                            className="w-full border border-slate-200 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none"
                             rows={2}
                             placeholder="actual physical qty = "
                         />
@@ -748,7 +749,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                                 <h3 className="text-sm font-bold text-slate-700 uppercase">Serials & Test Data</h3>
                                 <div className="text-right">
                                     <span className="text-xs text-slate-500 block">{serialEntries.filter(s => s.serial).length} / {formData.quantity} Assigned</span>
-                                    <span className="text-[9px] text-[#658C3E]">Paste into any cell. Grid auto-expands.</span>
+                                    <span className="text-[9px] text-blue-600">Paste into any cell. Grid auto-expands.</span>
                                 </div>
                             </div>
 
@@ -784,7 +785,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                                                 <td className="p-1">
                                                     <input
                                                         type="text"
-                                                        className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-[#8EBF45] focus:bg-white rounded outline-none bg-transparent font-mono"
+                                                        className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded outline-none bg-transparent font-mono"
                                                         value={entry.serial}
                                                         onChange={(e) => handleEntryChange(idx, 'serial', e.target.value)}
                                                         onPaste={(e) => handleGridPaste(e, idx, 'serial')}
@@ -794,7 +795,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                                                 <td className="p-1">
                                                     <input
                                                         type="text"
-                                                        className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-[#8EBF45] focus:bg-white rounded outline-none bg-transparent"
+                                                        className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded outline-none bg-transparent"
                                                         value={entry.voltage}
                                                         onChange={(e) => handleEntryChange(idx, 'voltage', e.target.value)}
                                                         onPaste={(e) => handleGridPaste(e, idx, 'voltage')}
@@ -803,7 +804,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                                                 <td className="p-1">
                                                     <input
                                                         type="text"
-                                                        className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-[#8EBF45] focus:bg-white rounded outline-none bg-transparent"
+                                                        className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded outline-none bg-transparent"
                                                         value={entry.resistance}
                                                         onChange={(e) => handleEntryChange(idx, 'resistance', e.target.value)}
                                                         onPaste={(e) => handleGridPaste(e, idx, 'resistance')}
@@ -812,7 +813,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                                                 <td className="p-1">
                                                     <input
                                                         type="text"
-                                                        className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-[#8EBF45] focus:bg-white rounded outline-none bg-transparent"
+                                                        className="w-full p-1 border border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white rounded outline-none bg-transparent"
                                                         value={entry.capacity}
                                                         onChange={(e) => handleEntryChange(idx, 'capacity', e.target.value)}
                                                         onPaste={(e) => handleGridPaste(e, idx, 'capacity')}
@@ -847,7 +848,7 @@ const ReceivedGoods: React.FC<ReceivedGoodsProps> = ({
                             </button>
                         ) : <div></div>}
 
-                        <button type="submit" className="bg-[#8EBF45] text-[#0D0D0D] px-8 py-2.5 rounded-lg hover:bg-[#658C3E] hover:text-white transition-all font-black uppercase tracking-widest text-xs shadow-lg active:scale-95">
+                        <button type="submit" className="bg-blue-600 text-white px-8 py-2.5 rounded-lg hover:bg-blue-700 transition-all font-black uppercase tracking-widest text-xs shadow-lg active:scale-95">
                             {editingGood ? 'Update Record' : 'Save Record'}
                         </button>
                     </div>
