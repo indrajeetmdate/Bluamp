@@ -41,8 +41,8 @@ interface ProductLabelProps {
 
 const ProductLabel: React.FC<ProductLabelProps> = ({ data, id }) => {
     // Using the high-quality template background
-    const BACKGROUND_URL = "https://ofnwuifgzqjmmnsqsoed.supabase.co/storage/v1/object/public/public%20images/bluamp_coloured.png";
-    const DTF_BACKGROUND_URL = "https://ofnwuifgzqjmmnsqsoed.supabase.co/storage/v1/object/public/public%20images/bluamp_coloured.png";
+    const BACKGROUND_URL = "https://ofnwuifgzqjmmnsqsoed.supabase.co/storage/v1/object/public/public%20images/label_template.png";
+    const DTF_BACKGROUND_URL = "https://ofnwuifgzqjmmnsqsoed.supabase.co/storage/v1/object/public/public%20images/label_template.png";
     const labelRef = useRef<HTMLDivElement>(null);
 
     const handlePrint = () => {
