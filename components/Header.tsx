@@ -50,34 +50,7 @@ const SubNavButton: React.FC<NavButtonProps> = ({ isActive, onClick, children, i
 
 const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRole, onLogout }) => {
   const [isOtherOpen, setIsOtherOpen] = useState(false);
-  const [isPostingSlack, setIsPostingSlack] = useState(false);
-  const [slackToast, setSlackToast] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const handleSendSlackTasks = async () => {
-    setIsPostingSlack(true);
-    setSlackToast(null);
-    try {
-      const res = await fetch('/api/slack-daily-tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user: 'all' })
-      });
-      const data = await res.json();
-      if (data.success && !data.warning) {
-        setSlackToast('✅ Posted to Slack!');
-      } else if (data.warning) {
-        setSlackToast(`⚠️ ${data.warning}`);
-      } else {
-        setSlackToast(`❌ ${data.error || 'Failed'}`);
-      }
-    } catch (err: any) {
-      setSlackToast(`❌ Connection Error: ${err.message}`);
-    } finally {
-      setIsPostingSlack(false);
-      setTimeout(() => setSlackToast(null), 5000);
-    }
-  };
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -272,26 +245,8 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
             </div>
           </nav>
 
-          {/* USER PROFILE / LOGOUT & SLACK BUTTON */}
+          {/* USER PROFILE / LOGOUT */}
           <div className="flex items-center space-x-3 py-2 md:py-0 justify-end border-t md:border-t-0 border-slate-800">
-            {/* Direct Slack Broadcast Button - Always Visible */}
-            <div className="relative">
-              {slackToast && (
-                <div className="absolute right-0 -bottom-8 whitespace-nowrap text-[11px] font-bold px-2 py-0.5 bg-slate-800 text-white rounded border border-slate-700 shadow-xl z-50 animate-in fade-in">
-                  {slackToast}
-                </div>
-              )}
-              <button
-                onClick={handleSendSlackTasks}
-                disabled={isPostingSlack}
-                className="flex items-center gap-1.5 bg-[#4A154B] hover:bg-[#3F0E40] active:scale-95 text-white text-xs font-extrabold px-3 py-1.5 rounded-full shadow-md transition-all border border-[#611D62] disabled:opacity-50"
-                title="Post active employee tasks to Slack channel immediately"
-              >
-                <span className="text-sm">📢</span>
-                <span className="font-bold">Post Tasks to Slack</span>
-              </button>
-            </div>
-
             {username && (
               <div className="flex items-center space-x-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800">
                 <div className="w-6 h-6 rounded-full bg-[#8EBF45] text-[#0D0D0D] font-extrabold flex items-center justify-center text-xs uppercase">
