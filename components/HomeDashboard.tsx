@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import type { ReceivedGood, WIPItem, FinishedGood, Recipe, SupplyRecord, LogEntry, View, ExtractedInvoice, Expense, EmployeeTask } from '../types';
+import { getDueDateBadgeInfo } from '../utils';
 
 interface HomeDashboardProps {
     receivedGoods: ReceivedGood[];
@@ -235,11 +236,18 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                                         <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{task.description}</p>
                                                     )}
                                                     <div className="flex items-center gap-2 mt-2 text-[10px]">
-                                                        {task.due_date && (
-                                                            <span className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded font-bold">
-                                                                📅 Due: {task.due_date}
-                                                            </span>
-                                                        )}
+                                                        {(() => {
+                                                            const badge = getDueDateBadgeInfo(task.due_date);
+                                                            if (!badge) return null;
+                                                            return (
+                                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 shrink-0 ${
+                                                                    task.completed ? 'bg-slate-100 text-slate-400 border border-slate-200' : badge.badgeClass
+                                                                }`}>
+                                                                    <span className={`w-1.5 h-1.5 rounded-full ${task.completed ? 'bg-slate-300' : badge.dotColor}`}></span>
+                                                                    <span>📅 {badge.dayOfWeek}, {badge.ddmmyy}</span>
+                                                                </span>
+                                                            );
+                                                        })()}
                                                         <span className="text-slate-400">By: {task.created_by}</span>
                                                     </div>
                                                 </div>
@@ -318,11 +326,17 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                                                         {t.title}
                                                                     </span>
                                                                 </label>
-                                                                {t.due_date && (
-                                                                    <span className="text-[9px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded shrink-0">
-                                                                        {t.due_date}
-                                                                    </span>
-                                                                )}
+                                                                {(() => {
+                                                                    const badge = getDueDateBadgeInfo(t.due_date);
+                                                                    if (!badge) return null;
+                                                                    return (
+                                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded shrink-0 font-medium ${
+                                                                            t.completed ? 'bg-slate-100 text-slate-400' : badge.badgeClass
+                                                                        }`}>
+                                                                            {badge.dayOfWeek}, {badge.ddmmyy}
+                                                                        </span>
+                                                                    );
+                                                                })()}
                                                             </li>
                                                         ))}
                                                     </ul>

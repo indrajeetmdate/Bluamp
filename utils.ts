@@ -104,3 +104,80 @@ export const generateUnitIds = (good: FinishedGood, allGoods: FinishedGood[], re
     }
     return ids;
 };
+
+export interface DueDateBadgeInfo {
+  formattedText: string;
+  dayOfWeek: string;
+  ddmmyy: string;
+  priority: 1 | 2 | 3 | 4;
+  badgeClass: string;
+  dotColor: string;
+}
+
+export const getDueDateBadgeInfo = (dueDateStr?: string): DueDateBadgeInfo | null => {
+  if (!dueDateStr) return null;
+  const parts = dueDateStr.split('-');
+  if (parts.length !== 3) return null;
+
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+
+  const targetDate = new Date(year, month - 1, day);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const diffTime = targetDate.getTime() - today.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  const dayOfWeek = targetDate.toLocaleDateString('en-US', { weekday: 'short' });
+  const dd = String(day).padStart(2, '0');
+  const mm = String(month).padStart(2, '0');
+  const yy = String(year).slice(-2);
+  const ddmmyy = `${dd}/${mm}/${yy}`;
+  const formattedText = `${dayOfWeek}, ${ddmmyy}`;
+
+  if (diffDays <= 0) {
+    // Priority 1: Today or Overdue (Red / Crimson)
+    return {
+      formattedText,
+      dayOfWeek,
+      ddmmyy,
+      priority: 1,
+      badgeClass: 'bg-rose-100 text-rose-800 border border-rose-300 font-bold',
+      dotColor: 'bg-rose-600',
+    };
+  } else if (diffDays <= 7) {
+    // Priority 2: Tomorrow till next week (1 to 7 days) (Amber / Yellow)
+    return {
+      formattedText,
+      dayOfWeek,
+      ddmmyy,
+      priority: 2,
+      badgeClass: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold',
+      dotColor: 'bg-amber-500',
+    };
+  } else if (diffDays <= 30) {
+    // Priority 3: Next week till end of 30 days (8 to 30 days) (Emerald / Blue)
+    return {
+      formattedText,
+      dayOfWeek,
+      ddmmyy,
+      priority: 3,
+      badgeClass: 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-semibold',
+      dotColor: 'bg-emerald-500',
+    };
+  } else {
+    // Priority 4: Beyond 30 days (Neutral Slate)
+    return {
+      formattedText,
+      dayOfWeek,
+      ddmmyy,
+      priority: 4,
+      badgeClass: 'bg-slate-100 text-slate-700 border border-slate-200 font-medium',
+      dotColor: 'bg-slate-400',
+    };
+  }
+};
+

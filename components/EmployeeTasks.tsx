@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, EmployeeTask } from '../types';
+import { getDueDateBadgeInfo } from '../utils';
 
 interface EmployeeTasksProps {
   currentUser: User | null;
@@ -251,13 +252,18 @@ export const EmployeeTasks: React.FC<EmployeeTasksProps> = ({
                               </p>
                             )}
                             <div className="flex flex-wrap items-center gap-2 mt-2 text-[10px]">
-                              {task.due_date && (
-                                <span className={`px-2 py-0.5 rounded font-bold ${
-                                  task.completed ? 'bg-slate-100 text-slate-400' : 'bg-amber-100 text-amber-800'
-                                }`}>
-                                  📅 Due: {task.due_date}
-                                </span>
-                              )}
+                              {(() => {
+                                const badge = getDueDateBadgeInfo(task.due_date);
+                                if (!badge) return null;
+                                return (
+                                  <span className={`px-2.5 py-1 rounded-md text-[11px] flex items-center gap-1.5 shadow-xs ${
+                                    task.completed ? 'bg-slate-100 text-slate-400 border border-slate-200' : badge.badgeClass
+                                  }`}>
+                                    <span className={`w-2 h-2 rounded-full ${task.completed ? 'bg-slate-300' : badge.dotColor}`}></span>
+                                    <span>📅 Due: <strong className="font-extrabold">{badge.dayOfWeek}</strong>, {badge.ddmmyy}</span>
+                                  </span>
+                                );
+                              })()}
                               <span className="text-slate-400 font-medium">
                                 Assigned by: <strong className="text-slate-600">{task.created_by}</strong>
                               </span>
