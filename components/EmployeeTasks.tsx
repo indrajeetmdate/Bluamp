@@ -25,27 +25,38 @@ export const EmployeeTasks: React.FC<EmployeeTasksProps> = ({
   const [addingTaskUser, setAddingTaskUser] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<EmployeeTask | null>(null);
 
+  const getTodayStr = () => new Date().toISOString().split('T')[0];
+
   // Form State for New Task
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDesc, setNewTaskDesc] = useState('');
-  const [newTaskDueDate, setNewTaskDueDate] = useState('');
+  const [newTaskDueDate, setNewTaskDueDate] = useState(getTodayStr());
 
   // Form State for Edit Task
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
-  const [editDueDate, setEditDueDate] = useState('');
+  const [editDueDate, setEditDueDate] = useState(getTodayStr());
 
-  // Get list of employees (combines system users and any usernames in tasks)
+  // Filter tasks to exclude legacy dummy accounts (general, chitale)
+  const validTasks = React.useMemo(() => {
+    return tasks.filter(t => t.assigned_to !== 'general' && t.assigned_to !== 'chitale');
+  }, [tasks]);
+
+  // Get list of employees (combines system users and active task usernames)
   const employeeList = React.useMemo(() => {
     const userMap = new Map<string, User>();
-    users.forEach(u => userMap.set(u.username, u));
-    tasks.forEach(t => {
-      if (!userMap.has(t.assigned_to)) {
+    users.forEach(u => {
+      if (u.username !== 'general' && u.username !== 'chitale') {
+        userMap.set(u.username, u);
+      }
+    });
+    validTasks.forEach(t => {
+      if (t.assigned_to !== 'general' && t.assigned_to !== 'chitale' && !userMap.has(t.assigned_to)) {
         userMap.set(t.assigned_to, { username: t.assigned_to, role: 'user' });
       }
     });
     return Array.from(userMap.values());
-  }, [users, tasks]);
+  }, [users, validTasks]);
 
   const filteredEmployees = React.useMemo(() => {
     if (selectedUserFilter === 'all') return employeeList;
@@ -56,7 +67,7 @@ export const EmployeeTasks: React.FC<EmployeeTasksProps> = ({
     setAddingTaskUser(username);
     setNewTaskTitle('');
     setNewTaskDesc('');
-    setNewTaskDueDate('');
+    setNewTaskDueDate(getTodayStr());
   };
 
   const handleCreateTaskSubmit = (e: React.FormEvent) => {
@@ -81,8 +92,8 @@ export const EmployeeTasks: React.FC<EmployeeTasksProps> = ({
   };
 
   // Overall Statistics
-  const totalTasksCount = tasks.length;
-  const completedTasksCount = tasks.filter(t => t.completed).length;
+  const totalTasksCount = validTasks.length;
+  const completedTasksCount = validTasks.filter(t => t.completed).length;
   const overallCompletionRate = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
 
   return (
@@ -143,7 +154,7 @@ export const EmployeeTasks: React.FC<EmployeeTasksProps> = ({
       {/* EMPLOYEE TASK CARDS GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {filteredEmployees.map(employee => {
-          const empTasks = tasks.filter(t => t.assigned_to === employee.username);
+          const empTasks = validTasks.filter(t => t.assigned_to === employee.username);
           const empCompleted = empTasks.filter(t => t.completed).length;
           const empProgress = empTasks.length > 0 ? Math.round((empCompleted / empTasks.length) * 100) : 0;
 
