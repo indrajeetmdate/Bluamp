@@ -153,7 +153,6 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
         if (action.includes('Delivered') || action.includes('Shipped')) return '🚚';
         if (action.includes('Started') || action.includes('Production')) return '⚙️';
         if (action.includes('Tested') || action.includes('Test')) return '🧪';
-        if (action.includes('Deleted') || action.includes('Removed')) return '🗑️';
         if (action.includes('Invoice') || action.includes('Saved')) return '📄';
         return '📝';
     };
@@ -162,8 +161,8 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
         <div className="max-w-7xl mx-auto space-y-8">
             {/* Header greeting */}
             <div>
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                    {greeting}, <span className="text-[#658C3E]">{currentUser?.username?.split('@')[0] || 'User'}</span>
+                <h1 className="text-3xl font-black text-[#205f64] tracking-tight font-brand">
+                    {greeting}, <span className="text-[#498e72]">{currentUser?.username?.split('@')[0] || 'User'}</span>
                 </h1>
                 <p className="text-sm text-slate-500 mt-1 font-medium">{todayStr}</p>
             </div>
@@ -174,23 +173,23 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     <button
                         key={link.view}
                         onClick={() => setView(link.view)}
-                        className={`bg-gradient-to-br ${link.color} border rounded-xl p-3 text-center hover:scale-105 transition-all duration-200 hover:shadow-lg group`}
+                        className={`bg-white border border-[#2ca4c2]/20 hover:border-[#498e72] rounded-xl p-3 text-center hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md group`}
                     >
                         <div className="text-2xl mb-1 group-hover:scale-110 transition-transform">{link.icon}</div>
-                        <div className="text-[10px] font-bold text-slate-700 uppercase tracking-wider leading-tight">{link.label}</div>
+                        <div className="text-[10px] font-bold text-[#205f64] uppercase tracking-wider leading-tight font-brand">{link.label}</div>
                     </button>
                 ))}
             </div>
 
-            {/* EMPLOYEE TO-DO & TASKS SECTION (MOVED TO TOP) */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+            {/* EMPLOYEE TO-DO & TASKS SECTION */}
+            <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-3 mb-4">
                     <div>
-                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <span className="w-2 h-2 bg-[#8EBF45] rounded-full"></span>
+                        <h3 className="text-xs font-black text-[#205f64] uppercase tracking-widest flex items-center gap-2 font-brand">
+                            <span className="w-2.5 h-2.5 bg-[#498e72] rounded-full"></span>
                             {currentUser?.role === 'admin' ? 'All Employee To-Do Tasks' : 'My Assigned To-Do List'}
                         </h3>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                        <p className="text-xs text-slate-600 font-medium mt-0.5">
                             {currentUser?.role === 'admin'
                                 ? 'Consolidated operational tasks assigned to active team members.'
                                 : 'Your assigned operational action items.'}
@@ -213,7 +212,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                         </button>
                         <button
                             onClick={() => setView('employee_tasks')}
-                            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                            className="px-3.5 py-1.5 bg-[#205f64] hover:bg-[#498e72] text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
                         >
                             <span>Manage Tasks</span>
                             <span>→</span>
@@ -221,7 +220,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     </div>
                 </div>
 
-                {/* NON-ADMIN EMPLOYEE VIEW: PERSONAL TASK LIST */}
+                {/* PERSONAL TASK LIST */}
                 {currentUser?.role !== 'admin' ? (
                     (() => {
                         let myTasks = validEmployeeTasks.filter(t => 
@@ -236,14 +235,14 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
 
                         return (
                             <div className="space-y-4">
-                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center justify-between">
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between">
                                     <div>
                                         <div className="text-xs font-bold text-slate-700">Task Completion Status</div>
                                         <div className="text-xs text-slate-500">{completedCount} of {myTasks.length} tasks completed</div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
-                                            <div className="h-full bg-[#8EBF45] rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                                            <div className="h-full bg-[#498e72] rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
                                         </div>
                                         <span className="text-xs font-black text-slate-800">{progress}%</span>
                                     </div>
@@ -261,14 +260,14 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                                 className={`p-3.5 rounded-xl border transition-all flex items-start gap-3 ${
                                                     task.completed
                                                         ? 'bg-slate-50/70 border-slate-200 opacity-70'
-                                                        : 'bg-white border-slate-200 shadow-sm hover:border-slate-300'
+                                                        : 'bg-white border-slate-200 shadow-sm hover:border-[#498e72]'
                                                 }`}
                                             >
                                                 <input
                                                     type="checkbox"
                                                     checked={task.completed}
                                                     onChange={() => onToggleTask && onToggleTask(task.id)}
-                                                    className="mt-0.5 w-4 h-4 text-[#8EBF45] rounded border-slate-300 focus:ring-[#8EBF45] cursor-pointer"
+                                                    className="mt-0.5 w-4 h-4 text-[#498e72] rounded border-slate-300 focus:ring-[#498e72] cursor-pointer"
                                                 />
                                                 <div className="flex-1 min-w-0">
                                                     <p className={`text-xs font-bold ${task.completed ? 'line-through text-slate-400' : 'text-slate-900'}`}>
@@ -301,28 +300,26 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                         );
                     })()
                 ) : (
-                    /* ADMIN VIEW: CONSOLIDATED ALL EMPLOYEE TASKS */
+                    /* ADMIN VIEW */
                     (() => {
                         const totalCount = validEmployeeTasks.length;
                         const totalDone = validEmployeeTasks.filter(t => t.completed).length;
-
-                        // Group tasks by employee username
                         const empNames = Array.from(new Set(validEmployeeTasks.map(t => t.assigned_to)));
 
                         return (
                             <div className="space-y-4">
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase">Total Tasks</div>
-                                        <div className="text-lg font-black text-slate-900">{totalCount}</div>
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">Total Tasks</div>
+                                        <div className="text-lg font-black text-[#205f64]">{totalCount}</div>
                                     </div>
                                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase">Completed</div>
-                                        <div className="text-lg font-black text-[#658C3E]">{totalDone}</div>
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">Completed</div>
+                                        <div className="text-lg font-black text-[#498e72]">{totalDone}</div>
                                     </div>
                                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase">Active Employees</div>
-                                        <div className="text-lg font-black text-blue-600">{empNames.length}</div>
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase">Active Employees</div>
+                                        <div className="text-lg font-black text-[#1a639c]">{empNames.length}</div>
                                     </div>
                                 </div>
 
@@ -331,7 +328,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                         <p className="text-xs text-slate-400 font-medium">No tasks assigned yet across employees.</p>
                                         <button
                                             onClick={() => setView('employee_tasks')}
-                                            className="mt-2 text-xs font-bold text-[#658C3E] hover:underline"
+                                            className="mt-2 text-xs font-bold text-[#498e72] hover:underline"
                                         >
                                             + Go to Employee Tasks to assign tasks
                                         </button>
@@ -345,7 +342,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                                 <div key={emp} className="bg-slate-50/70 rounded-xl border border-slate-200 p-3.5 space-y-2">
                                                     <div className="flex justify-between items-center border-b border-slate-200 pb-2">
                                                         <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
-                                                            <span className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px]">
+                                                            <span className="w-6 h-6 rounded-full bg-[#205f64] text-white flex items-center justify-center text-[10px]">
                                                                 {String(emp).charAt(0).toUpperCase()}
                                                             </span>
                                                             {emp}
@@ -362,7 +359,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                                                         type="checkbox"
                                                                         checked={t.completed}
                                                                         onChange={() => onToggleTask && onToggleTask(t.id)}
-                                                                        className="w-3.5 h-3.5 text-[#8EBF45] rounded border-slate-300 focus:ring-[#8EBF45]"
+                                                                        className="w-3.5 h-3.5 text-[#498e72] rounded border-slate-300 focus:ring-[#498e72]"
                                                                     />
                                                                     <span className={`truncate ${t.completed ? 'line-through text-slate-400' : 'text-slate-800 font-medium'}`}>
                                                                         {t.title}
@@ -395,63 +392,63 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
 
             {/* KPI Cards - Operations */}
             <div>
-                <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 bg-[#8EBF45] rounded-full"></span>
+                <h2 className="text-xs font-black text-[#205f64] uppercase tracking-widest mb-3 flex items-center gap-2 font-brand">
+                    <span className="w-2 h-2 bg-[#498e72] rounded-full"></span>
                     Operations Overview
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {/* Raw Materials */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView('received')}>
+                    <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView('received')}>
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Raw Materials</p>
-                                <p className="text-3xl font-black text-slate-900 mt-1">{ops.rmTotal}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Raw Materials</p>
+                                <p className="text-3xl font-black text-[#205f64] mt-1">{ops.rmTotal}</p>
                                 <p className="text-xs text-slate-500 mt-0.5">{ops.rmTotalQty.toLocaleString()} total units</p>
                             </div>
                             <div className="text-3xl opacity-60">📦</div>
                         </div>
                         {ops.rmToday > 0 && (
-                            <div className="mt-3 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full px-2.5 py-1 inline-block">
+                            <div className="mt-3 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full px-2.5 py-1 inline-block border border-amber-200">
                                 +{ops.rmToday} today
                             </div>
                         )}
                     </div>
 
                     {/* WIP */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView('wip')}>
+                    <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView('wip')}>
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">In Production</p>
-                                <p className="text-3xl font-black text-slate-900 mt-1">{ops.wipTotal}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">In Production</p>
+                                <p className="text-3xl font-black text-[#205f64] mt-1">{ops.wipTotal}</p>
                                 <p className="text-xs text-slate-500 mt-0.5">{ops.wipTotalQty.toLocaleString()} batches</p>
                             </div>
                             <div className="text-3xl opacity-60">⚙️</div>
                         </div>
                         {ops.wipToday > 0 && (
-                            <div className="mt-3 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-full px-2.5 py-1 inline-block">
+                            <div className="mt-3 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-full px-2.5 py-1 inline-block border border-blue-200">
                                 +{ops.wipToday} today
                             </div>
                         )}
                     </div>
 
                     {/* Finished Goods */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView('finished')}>
+                    <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView('finished')}>
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Finished Goods</p>
-                                <p className="text-3xl font-black text-slate-900 mt-1">{ops.fgTotal}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Finished Goods</p>
+                                <p className="text-3xl font-black text-[#205f64] mt-1">{ops.fgTotal}</p>
                                 <p className="text-xs text-slate-500 mt-0.5">{ops.fgTotalQty.toLocaleString()} units built</p>
                             </div>
                             <div className="text-3xl opacity-60">✅</div>
                         </div>
                         <div className="mt-3 flex gap-2">
                             {ops.fgToday > 0 && (
-                                <div className="bg-green-50 text-green-700 text-[10px] font-bold rounded-full px-2.5 py-1 inline-block">
+                                <div className="bg-[#75c081]/15 text-[#205f64] text-[10px] font-bold rounded-full px-2.5 py-1 inline-block border border-[#75c081]/30">
                                     +{ops.fgToday} today
                                 </div>
                             )}
                             {ops.fgDelivered > 0 && (
-                                <div className="bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full px-2.5 py-1 inline-block">
+                                <div className="bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full px-2.5 py-1 inline-block border border-slate-200">
                                     {ops.fgDelivered} delivered
                                 </div>
                             )}
@@ -459,17 +456,17 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     </div>
 
                     {/* Supplies */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView('supplies')}>
+                    <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView('supplies')}>
                         <div className="flex items-start justify-between">
                             <div>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Supplies</p>
-                                <p className="text-3xl font-black text-slate-900 mt-1">{ops.supInward + ops.supOutward}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Supplies</p>
+                                <p className="text-3xl font-black text-[#205f64] mt-1">{ops.supInward + ops.supOutward}</p>
                                 <p className="text-xs text-slate-500 mt-0.5">{ops.supInward}↓ in · {ops.supOutward}↑ out</p>
                             </div>
                             <div className="text-3xl opacity-60">🚚</div>
                         </div>
                         {ops.supToday > 0 && (
-                            <div className="mt-3 bg-purple-50 text-purple-700 text-[10px] font-bold rounded-full px-2.5 py-1 inline-block">
+                            <div className="mt-3 bg-purple-50 text-purple-700 text-[10px] font-bold rounded-full px-2.5 py-1 inline-block border border-purple-200">
                                 +{ops.supToday} today
                             </div>
                         )}
@@ -477,37 +474,37 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                 </div>
             </div>
 
-            {/* KPI Cards - Finance (Admin/Billing only) */}
+            {/* KPI Cards - Finance */}
             {(currentUser?.role === 'admin' || currentUser?.role === 'billing') && (
                 <div>
-                    <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-[#658C3E] rounded-full"></span>
+                    <h2 className="text-xs font-black text-[#205f64] uppercase tracking-widest mb-3 flex items-center gap-2 font-brand">
+                        <span className="w-2 h-2 bg-[#498e72] rounded-full"></span>
                         Finance Summary
                     </h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {/* Invoices Total */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView(currentUser?.role === 'admin' ? 'finance_dashboard' as View : 'finance_maker' as View)}>
+                        <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView(currentUser?.role === 'admin' ? 'finance_dashboard' as View : 'finance_maker' as View)}>
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Invoices</p>
-                                    <p className="text-3xl font-black text-slate-900 mt-1">{invoiceStats.total}</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Invoices</p>
+                                    <p className="text-3xl font-black text-[#205f64] mt-1">{invoiceStats.total}</p>
                                     <p className="text-xs text-slate-500 mt-0.5">{formatCurrency(invoiceStats.totalValue)}</p>
                                 </div>
                                 <div className="text-3xl opacity-60">🧾</div>
                             </div>
                             {invoiceStats.today > 0 && (
-                                <div className="mt-3 bg-green-50 text-green-700 text-[10px] font-bold rounded-full px-2.5 py-1 inline-block">
+                                <div className="mt-3 bg-[#75c081]/15 text-[#205f64] text-[10px] font-bold rounded-full px-2.5 py-1 inline-block border border-[#75c081]/30">
                                     +{invoiceStats.today} today ({formatCurrency(invoiceStats.todayValue)})
                                 </div>
                             )}
                         </div>
 
                         {/* This Week */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow">
+                        <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5 hover:shadow-md transition-shadow">
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">This Week</p>
-                                    <p className="text-3xl font-black text-[#658C3E] mt-1">{invoiceStats.thisWeek}</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">This Week</p>
+                                    <p className="text-3xl font-black text-[#498e72] mt-1">{invoiceStats.thisWeek}</p>
                                     <p className="text-xs text-slate-500 mt-0.5">invoices processed</p>
                                 </div>
                                 <div className="text-3xl opacity-60">📊</div>
@@ -515,10 +512,10 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                         </div>
 
                         {/* Expenses Today */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView('finance_expenses' as View)}>
+                        <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setView('finance_expenses' as View)}>
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Expenses Today</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Expenses Today</p>
                                     <p className="text-3xl font-black text-red-600 mt-1">{expenseStats.today}</p>
                                     <p className="text-xs text-slate-500 mt-0.5">{formatCurrency(expenseStats.todayAmount)} spent</p>
                                 </div>
@@ -527,11 +524,11 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                         </div>
 
                         {/* Total Expenses */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition-shadow">
+                        <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5 hover:shadow-md transition-shadow">
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Entries</p>
-                                    <p className="text-3xl font-black text-slate-900 mt-1">{expenseStats.total}</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Entries</p>
+                                    <p className="text-3xl font-black text-[#205f64] mt-1">{expenseStats.total}</p>
                                     <p className="text-xs text-slate-500 mt-0.5">expense records</p>
                                 </div>
                                 <div className="text-3xl opacity-60">📋</div>
@@ -544,13 +541,13 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
             {/* Bottom Section: Recent Activity + Recent Invoices */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Recent Activity */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+                        <h3 className="text-xs font-black text-[#205f64] uppercase tracking-widest flex items-center gap-2 font-brand">
+                            <span className="w-2 h-2 bg-[#2ca4c2] rounded-full animate-pulse"></span>
                             Recent Activity
                         </h3>
-                        <button onClick={() => setView('log')} className="text-[10px] font-bold text-[#658C3E] hover:underline uppercase tracking-wider">
+                        <button onClick={() => setView('log')} className="text-[10px] font-bold text-[#498e72] hover:underline uppercase tracking-wider">
                             View All →
                         </button>
                     </div>
@@ -560,7 +557,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                         <div className="space-y-3">
                             {recentLogs.map((log, idx) => (
                                 <div key={log.id || idx} className="flex items-start gap-3 group">
-                                    <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-sm flex-shrink-0 group-hover:bg-[#8EBF45]/10 transition-colors">
+                                    <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-sm flex-shrink-0 group-hover:bg-[#75c081]/20 transition-colors">
                                         {actionIcon(log.action)}
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -576,16 +573,16 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     )}
                 </div>
 
-                {/* Recent Invoices (Admin/Billing only) */}
+                {/* Recent Invoices */}
                 {(currentUser?.role === 'admin' || currentUser?.role === 'billing') ? (
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 bg-[#8EBF45] rounded-full"></span>
+                            <h3 className="text-xs font-black text-[#205f64] uppercase tracking-widest flex items-center gap-2 font-brand">
+                                <span className="w-2 h-2 bg-[#498e72] rounded-full"></span>
                                 Recent Documents
                             </h3>
                             {currentUser?.role === 'admin' && (
-                                <button onClick={() => setView('finance_dashboard' as View)} className="text-[10px] font-bold text-[#658C3E] hover:underline uppercase tracking-wider">
+                                <button onClick={() => setView('finance_dashboard' as View)} className="text-[10px] font-bold text-[#498e72] hover:underline uppercase tracking-wider">
                                     Dashboard →
                                 </button>
                             )}
@@ -596,7 +593,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                             <div className="space-y-3">
                                 {recentInvoices.map((inv, idx) => (
                                     <div key={(inv as any).id || idx} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-slate-50 transition-colors group">
-                                        <div className="w-8 h-8 bg-[#8EBF45]/10 rounded-lg flex items-center justify-center text-sm flex-shrink-0">
+                                        <div className="w-8 h-8 bg-[#75c081]/15 rounded-lg flex items-center justify-center text-sm flex-shrink-0">
                                             {inv.document_type?.includes('po') ? '📋' : inv.document_type?.includes('quotation') ? '📝' : '🧾'}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -608,7 +605,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                             </p>
                                         </div>
                                         <div className="text-right flex-shrink-0">
-                                            <p className="text-sm font-black text-slate-900">{formatCurrency(inv.totals?.grand_total || 0)}</p>
+                                            <p className="text-sm font-black text-[#205f64]">{formatCurrency(inv.totals?.grand_total || 0)}</p>
                                             <p className="text-[10px] text-slate-400">{inv.invoice_metadata?.invoice_date || ''}</p>
                                         </div>
                                     </div>
@@ -617,36 +614,42 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                         )}
                     </div>
                 ) : (
-                    /* For general employees: Production Pipeline */
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
-                        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                    /* Production Pipeline */
+                    <div className="bg-white rounded-2xl shadow-sm border border-[#2ca4c2]/20 p-5">
+                        <h3 className="text-xs font-black text-[#205f64] uppercase tracking-widest mb-4 flex items-center gap-2 font-brand">
+                            <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
                             Production Pipeline
                         </h3>
                         <div className="flex items-center justify-between py-6">
                             <div className="text-center flex-1">
                                 <div className="text-2xl mb-1">📦</div>
-                                <p className="text-2xl font-black text-slate-900">{ops.rmTotal}</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">Raw</p>
+                                <p className="text-2xl font-black text-[#205f64]">{ops.rmTotal}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase">Raw</p>
                             </div>
                             <div className="text-slate-300 text-2xl">→</div>
                             <div className="text-center flex-1">
                                 <div className="text-2xl mb-1">⚙️</div>
-                                <p className="text-2xl font-black text-slate-900">{ops.wipTotal}</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">WIP</p>
+                                <p className="text-2xl font-black text-[#205f64]">{ops.wipTotal}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase">WIP</p>
                             </div>
                             <div className="text-slate-300 text-2xl">→</div>
                             <div className="text-center flex-1">
                                 <div className="text-2xl mb-1">✅</div>
-                                <p className="text-2xl font-black text-slate-900">{ops.fgTotal}</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">Finished</p>
+                                <p className="text-2xl font-black text-[#205f64]">{ops.fgTotal}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase">Finished</p>
                             </div>
                             <div className="text-slate-300 text-2xl">→</div>
                             <div className="text-center flex-1">
                                 <div className="text-2xl mb-1">🚚</div>
-                                <p className="text-2xl font-black text-slate-900">{ops.fgDelivered}</p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">Shipped</p>
+                                <p className="text-2xl font-black text-[#205f64]">{ops.fgDelivered}</p>
+                                <p className="text-[10px] font-bold text-slate-500 uppercase">Shipped</p>
                             </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
                         </div>
                     </div>
                 )}

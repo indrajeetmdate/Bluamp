@@ -7,8 +7,31 @@
     <title>Plant Inventory</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lexend:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                dark: '#205f64',       /* Deep Teal */
+                primary: '#498e72',    /* Sage Green */
+                secondary: '#75c081',  /* Vibrant Light Green */
+                focus: '#1a639c',      /* Vibrant Deep Blue */
+                accent: '#2ca4c2',     /* Ocean Cyan */
+                canvas: '#F8FAFC',     /* Soft Off-White */
+                text: '#1E293B',       /* Slate text */
+              }
+            },
+            fontFamily: {
+              brand: ['Lexend', 'sans-serif'],
+              body: ['Inter', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script type="importmap">
 {
@@ -30,19 +53,29 @@
 <style>
   body {
     font-family: 'Inter', sans-serif;
-    color: #404040;
-    background-color: #F9FAFB;
+    color: #1E293B;
+    background-color: #F8FAFC;
   }
   h1, h2, h3, h4, .font-brand {
     font-family: 'Lexend', sans-serif;
-    color: #0D0D0D;
+    color: #205f64;
   }
-  .bg-brand-primary { background-color: #8EBF45; }
-  .bg-brand-secondary { background-color: #658C3E; }
-  .bg-brand-dark { background-color: #0D0D0D; }
-  .text-brand-primary { color: #8EBF45; }
-  .text-brand-dark { color: #0D0D0D; }
-  .border-brand-accent { border-color: #A8BF75; }
+
+  /* Bluamp Gradient Logo */
+  .bluamp-logo-text {
+    background: linear-gradient(to right, #75c081, #2ca4c2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .bg-brand-primary { background-color: #498e72; }
+  .bg-brand-secondary { background-color: #75c081; }
+  .bg-brand-dark { background-color: #205f64; }
+  .text-brand-primary { color: #498e72; }
+  .text-brand-secondary { color: #75c081; }
+  .text-brand-dark { color: #205f64; }
+  .text-brand-accent { color: #2ca4c2; }
+  .border-brand-accent { border-color: rgba(44, 164, 194, 0.3); }
   
   /* Shared Industrial Table Styling */
   .plant-table th {
@@ -51,6 +84,12 @@
     letter-spacing: 0.05em;
     font-size: 0.75rem;
     font-weight: 700;
+    color: #205f64;
+    background-color: #F1F5F9;
+  }
+  .plant-table td {
+    font-family: 'Inter', sans-serif;
+    color: #1E293B;
   }
 </style>
 </head>

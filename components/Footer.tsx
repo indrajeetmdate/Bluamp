@@ -17,7 +17,7 @@ const Footer: React.FC<FooterProps> = ({ receivedGoods, finishedGoods }) => {
         <div className="flex items-center gap-4 pointer-events-auto">
           <button 
             onClick={() => setIsSearchOpen(true)}
-            className="flex items-center gap-2 bg-[#8EBF45] hover:bg-[#658C3E] text-[#0D0D0D] hover:text-white px-5 py-2.5 rounded-full transition-all font-black uppercase tracking-widest text-xs shadow-2xl border-2 border-white/20 active:scale-95 group"
+            className="flex items-center gap-2 bg-[#205f64] hover:bg-[#498e72] text-white px-5 py-2.5 rounded-full transition-all font-black uppercase tracking-widest text-xs shadow-2xl border-2 border-white/20 active:scale-95 group font-brand"
           >
               <SearchIcon className="w-4 h-4 group-hover:scale-110 transition-transform"/> Master Data Search
           </button>
@@ -26,7 +26,7 @@ const Footer: React.FC<FooterProps> = ({ receivedGoods, finishedGoods }) => {
 
       {/* Iframe Modal for Global Search */}
       <Modal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} title="Master Data Search" size="xl">
-          <div className="w-full h-[600px] overflow-hidden rounded-lg border border-[#A8BF75]/30">
+          <div className="w-full h-[600px] overflow-hidden rounded-lg border border-[#2ca4c2]/30">
               <iframe 
                   src={`${window.location.pathname}?mode=master_search`} 
                   width="100%" 

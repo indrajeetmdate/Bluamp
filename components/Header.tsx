@@ -26,11 +26,11 @@ const TopNavButton: React.FC<NavButtonProps> = ({ isActive, onClick, children, i
   <button
     onClick={onClick}
     className={`flex items-center px-4 py-3 text-sm font-semibold transition-all duration-200 border-b-4 focus:outline-none ${isActive
-      ? 'border-[#8EBF45] text-[#8EBF45] bg-white/5'
-      : 'border-transparent text-slate-400 hover:text-white hover:border-white/20'
+      ? 'border-[#498e72] text-[#75c081] bg-white/10'
+      : 'border-transparent text-slate-300 hover:text-white hover:border-[#75c081]/60'
       }`}
   >
-    {icon && <span className={`mr-2 transition-colors duration-200 ${isActive ? 'text-[#8EBF45]' : 'text-slate-500'}`}>{icon}</span>}
+    {icon && <span className={`mr-2 transition-colors duration-200 ${isActive ? 'text-[#75c081]' : 'text-slate-300'}`}>{icon}</span>}
     {children}
   </button>
 );
@@ -38,9 +38,9 @@ const TopNavButton: React.FC<NavButtonProps> = ({ isActive, onClick, children, i
 const SubNavButton: React.FC<NavButtonProps> = ({ isActive, onClick, children, icon }) => (
   <button
     onClick={onClick}
-    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all duration-200 whitespace-nowrap border focus:outline-none flex items-center gap-2 ${isActive
-      ? 'bg-[#8EBF45] text-[#0D0D0D] border-[#8EBF45] shadow-lg scale-105'
-      : 'bg-white text-[#404040] border-[#A8BF75]/30 hover:border-[#8EBF45] hover:text-[#658C3E]'
+    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 whitespace-nowrap border focus:outline-none flex items-center gap-2 ${isActive
+      ? 'bg-[#498e72] text-white border-[#498e72] shadow-md scale-105'
+      : 'bg-white text-[#1E293B] border-[#2ca4c2]/30 hover:border-[#498e72] hover:text-[#205f64]'
       }`}
   >
     {icon}
@@ -81,7 +81,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
   }, [currentView, categories]);
 
   return (
-    <header className="bg-[#0D0D0D] sticky top-0 z-[100] shadow-xl border-b border-[#404040] overflow-visible">
+    <header className="bg-[#205f64] sticky top-0 z-[100] shadow-xl border-b border-[#2ca4c2]/30 overflow-visible">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-visible">
         <div className="flex flex-col md:flex-row md:items-center justify-between h-auto md:h-16 overflow-visible">
           
@@ -91,11 +91,11 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
               <img
                 src="https://bfkxdpripwjxenfvwpfu.supabase.co/storage/v1/object/public/Logo/DC_Full_battery_black_bg.png"
                 alt="Datlion Cnergy Logo"
-                className="h-10 w-auto object-contain"
+                className="h-10 w-auto object-contain rounded-md p-0.5 bg-black/20"
               />
               <div className="flex flex-col justify-center">
-                <h1 className="text-lg font-bold text-white leading-none tracking-tight font-brand">Datlion Cnergy</h1>
-                <p className="text-[10px] text-[#8EBF45] font-black tracking-widest uppercase mt-0.5">Plant Management OS</p>
+                <h1 className="text-lg font-extrabold text-white leading-none tracking-tight font-brand bluamp-logo-text">Datlion Cnergy</h1>
+                <p className="text-[10px] text-[#75c081] font-black tracking-widest uppercase mt-0.5">Plant Management OS</p>
               </div>
             </div>
           </div>
@@ -135,7 +135,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
                 Finance
               </TopNavButton>
 
-              {/* 4. ADMIN (Combines Analytics: AI Assistant, Exports, Traceability, Logs) */}
+              {/* 4. ADMIN */}
               <TopNavButton
                 isActive={currentCategory === 'admin'}
                 onClick={() => setView('companies')}
@@ -146,40 +146,40 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
             </div>
 
             {/* DIVIDER */}
-            <div className="w-px h-6 bg-slate-700 mx-2 self-center hidden sm:block"></div>
+            <div className="w-px h-6 bg-[#2ca4c2]/40 mx-2 self-center hidden sm:block"></div>
 
-            {/* 5. OTHER LINKS DROPDOWN (Help, Reports, Prismatic Data) */}
+            {/* 5. OTHER LINKS DROPDOWN */}
             <div className="relative shrink-0" ref={dropdownRef}>
               <button
                 onClick={() => setIsOtherOpen(!isOtherOpen)}
                 className={`flex items-center px-4 py-3 text-sm font-semibold transition-all duration-200 border-b-4 focus:outline-none ${
                   isOtherOpen || currentCategory === 'help'
-                    ? 'border-[#8EBF45] text-[#8EBF45] bg-white/5'
-                    : 'border-transparent text-slate-400 hover:text-white hover:border-white/20'
+                    ? 'border-[#498e72] text-[#75c081] bg-white/10'
+                    : 'border-transparent text-slate-300 hover:text-white hover:border-[#75c081]/60'
                 }`}
               >
-                <span className={`mr-2 transition-colors duration-200 ${isOtherOpen || currentCategory === 'help' ? 'text-[#8EBF45]' : 'text-slate-500'}`}>
+                <span className={`mr-2 transition-colors duration-200 ${isOtherOpen || currentCategory === 'help' ? 'text-[#75c081]' : 'text-slate-300'}`}>
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
                 </span>
                 Other Links
-                <svg className={`w-3.5 h-3.5 ml-1.5 transition-transform duration-200 ${isOtherOpen ? 'rotate-180 text-[#8EBF45]' : 'text-slate-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className={`w-3.5 h-3.5 ml-1.5 transition-transform duration-200 ${isOtherOpen ? 'rotate-180 text-[#75c081]' : 'text-slate-300'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
-              {/* FIXED OVERLAY DROPDOWN MENU - Floats over main page */}
+              {/* OVERLAY DROPDOWN MENU */}
               {isOtherOpen && (
                 <>
                   <div 
-                    className="fixed inset-0 z-[9998] bg-black/20 backdrop-blur-[1px]" 
+                    className="fixed inset-0 z-[9998] bg-black/30 backdrop-blur-[1px]" 
                     onClick={() => setIsOtherOpen(false)} 
                   />
-                  <div className="fixed top-16 right-4 sm:right-20 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl py-3 z-[9999] animate-in fade-in slide-in-from-top-2 duration-150">
-                    <div className="px-4 py-2 text-[10px] font-black uppercase text-[#8EBF45] tracking-widest border-b border-slate-800 flex justify-between items-center">
+                  <div className="fixed top-16 right-4 sm:right-20 w-64 bg-[#1b4b4f] border border-[#2ca4c2]/40 rounded-2xl shadow-2xl py-3 z-[9999] animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-4 py-2 text-[10px] font-black uppercase text-[#75c081] tracking-widest border-b border-[#2ca4c2]/20 flex justify-between items-center">
                       <span>Resources & Portals</span>
-                      <span className="text-slate-500 font-normal">Press Esc to close</span>
+                      <span className="text-slate-300 font-normal">Press Esc</span>
                     </div>
 
                     {/* 1. Help Guide */}
@@ -188,21 +188,21 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
                         setView('help');
                         setIsOtherOpen(false);
                       }}
-                      className={`w-full text-left px-4 py-3 text-xs font-bold flex items-center justify-between hover:bg-slate-800 transition-colors ${
-                        currentView === 'help' ? 'text-[#8EBF45] bg-slate-800/80 font-black' : 'text-slate-200'
+                      className={`w-full text-left px-4 py-3 text-xs font-bold flex items-center justify-between hover:bg-[#205f64] transition-colors ${
+                        currentView === 'help' ? 'text-[#75c081] bg-[#205f64] font-black' : 'text-white'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-lg">📖</span>
                         <div>
                           <div className="leading-tight">Help & User Guide</div>
-                          <div className="text-[10px] text-slate-400 font-normal">Component & App Manual</div>
+                          <div className="text-[10px] text-slate-300 font-normal">Component & App Manual</div>
                         </div>
                       </div>
-                      <span className="text-[10px] bg-[#8EBF45]/20 text-[#8EBF45] px-1.5 py-0.5 rounded font-black">NEW</span>
+                      <span className="text-[10px] bg-[#75c081]/20 text-[#75c081] px-1.5 py-0.5 rounded font-black">NEW</span>
                     </button>
 
-                    <div className="h-px bg-slate-800 my-1"></div>
+                    <div className="h-px bg-[#2ca4c2]/20 my-1"></div>
 
                     {/* 2. Reports */}
                     <a
@@ -210,16 +210,16 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setIsOtherOpen(false)}
-                      className="w-full text-left px-4 py-3 text-xs font-bold flex items-center justify-between hover:bg-slate-800 text-slate-200 transition-colors"
+                      className="w-full text-left px-4 py-3 text-xs font-bold flex items-center justify-between hover:bg-[#205f64] text-white transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-lg">📊</span>
                         <div>
                           <div className="leading-tight">Reports Portal</div>
-                          <div className="text-[10px] text-slate-400 font-normal">External Support Reports</div>
+                          <div className="text-[10px] text-slate-300 font-normal">External Support Reports</div>
                         </div>
                       </div>
-                      <span className="text-xs text-slate-500">↗</span>
+                      <span className="text-xs text-slate-300">↗</span>
                     </a>
 
                     {/* 3. Prismatic Data */}
@@ -228,16 +228,16 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setIsOtherOpen(false)}
-                      className="w-full text-left px-4 py-3 text-xs font-bold flex items-center justify-between hover:bg-slate-800 text-slate-200 transition-colors"
+                      className="w-full text-left px-4 py-3 text-xs font-bold flex items-center justify-between hover:bg-[#205f64] text-white transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-lg">💎</span>
                         <div>
                           <div className="leading-tight">Prismatic Data</div>
-                          <div className="text-[10px] text-slate-400 font-normal">Analytics Engine</div>
+                          <div className="text-[10px] text-slate-300 font-normal">Analytics Engine</div>
                         </div>
                       </div>
-                      <span className="text-xs text-slate-500">↗</span>
+                      <span className="text-xs text-slate-300">↗</span>
                     </a>
                   </div>
                 </>
@@ -246,15 +246,15 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
           </nav>
 
           {/* USER PROFILE / LOGOUT */}
-          <div className="flex items-center space-x-3 py-2 md:py-0 justify-end border-t md:border-t-0 border-slate-800">
+          <div className="flex items-center space-x-3 py-2 md:py-0 justify-end border-t md:border-t-0 border-[#2ca4c2]/30">
             {username && (
-              <div className="flex items-center space-x-2 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800">
-                <div className="w-6 h-6 rounded-full bg-[#8EBF45] text-[#0D0D0D] font-extrabold flex items-center justify-center text-xs uppercase">
+              <div className="flex items-center space-x-2 bg-[#1b4b4f] px-3 py-1.5 rounded-full border border-[#2ca4c2]/30 shadow-inner">
+                <div className="w-6 h-6 rounded-full bg-[#498e72] text-white font-extrabold flex items-center justify-center text-xs uppercase shadow-sm">
                   {username.charAt(0)}
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-white leading-none">{username}</span>
-                  <span className="text-[9px] text-[#8EBF45] font-black uppercase tracking-wider mt-0.5">
+                  <span className="text-[9px] text-[#75c081] font-black uppercase tracking-wider mt-0.5">
                     {userRole === 'admin' ? 'Director Admin' : userRole === 'billing' ? 'Billing & Ops' : 'Employee'}
                   </span>
                 </div>
@@ -264,7 +264,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
             {onLogout && (
               <button
                 onClick={onLogout}
-                className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                className="p-2 text-slate-300 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors"
                 title="Logout"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -278,14 +278,14 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
       </div>
 
       {/* SUB-NAVIGATION BAR */}
-      <div className="bg-white border-t border-[#A8BF75]/30 shadow-sm">
+      <div className="bg-slate-50 border-t border-[#2ca4c2]/30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center space-x-3 py-2.5 overflow-x-auto scrollbar-hide">
             
             {/* HOME SUB-NAV */}
             {currentCategory === 'home' && (
               <>
-                <div className="flex items-center gap-1 text-[10px] font-black text-[#404040]/50 uppercase tracking-widest mr-2">Overview:</div>
+                <div className="flex items-center gap-1 text-[10px] font-black text-[#205f64]/70 uppercase tracking-widest mr-2">Overview:</div>
                 <SubNavButton isActive={currentView === 'home'} onClick={() => setView('home')}>Plant Dashboard Summary</SubNavButton>
               </>
             )}
@@ -323,7 +323,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
               </>
             )}
 
-            {/* ADMIN SUB-NAV (Combines Analytics) */}
+            {/* ADMIN SUB-NAV */}
             {currentCategory === 'admin' && (
               <>
                 <SubNavButton isActive={currentView === 'companies'} onClick={() => setView('companies')}>Companies</SubNavButton>
@@ -333,7 +333,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
                 <SubNavButton isActive={currentView === 'employee_tasks'} onClick={() => setView('employee_tasks')}>
                   📋 Employee Tasks
                 </SubNavButton>
-                <div className="w-px h-6 bg-[#A8BF75]/40 mx-2"></div>
+                <div className="w-px h-6 bg-[#2ca4c2]/30 mx-2"></div>
                 <SubNavButton isActive={currentView === 'ai_assistant'} onClick={() => setView('ai_assistant')} icon={<SparklesIcon className="h-3 w-3" />}>AI Assistant</SubNavButton>
                 <SubNavButton isActive={currentView === 'reports'} onClick={() => setView('reports')}>Exports</SubNavButton>
                 <SubNavButton isActive={currentView === 'master'} onClick={() => setView('master')}>Traceability</SubNavButton>
@@ -344,7 +344,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, setView, username, userRol
             {/* HELP SUB-NAV */}
             {currentCategory === 'help' && (
               <>
-                <div className="flex items-center gap-1 text-[10px] font-black text-[#404040]/50 uppercase tracking-widest mr-2">Guide:</div>
+                <div className="flex items-center gap-1 text-[10px] font-black text-[#205f64]/70 uppercase tracking-widest mr-2">Guide:</div>
                 <SubNavButton isActive={currentView === 'help'} onClick={() => setView('help')}>Help & User Guide</SubNavButton>
               </>
             )}

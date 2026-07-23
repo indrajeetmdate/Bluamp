@@ -26,18 +26,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-[#205f64] flex flex-col justify-center items-center p-4">
         <div className="flex flex-col items-center mb-10 animate-fade-in">
             <img 
                 src="https://bfkxdpripwjxenfvwpfu.supabase.co/storage/v1/object/public/Logo/DC_Full_battery_black_bg.png" 
-                alt="Datlion Cnergy Logo" 
-                className="h-24 w-auto object-contain mb-6"
+                alt="Bluamp Logo" 
+                className="h-24 w-auto object-contain mb-6 rounded-xl shadow-lg"
             />
-            <h1 className="text-3xl font-bold text-white tracking-tight font-brand">Datlion Cnergy</h1>
-            <p className="text-xs font-black text-[#8EBF45] uppercase tracking-[0.3em] mt-2">Plant Management System</p>
+            <h1 className="text-3xl font-black text-white tracking-tight font-brand">Bluamp Plant OS</h1>
+            <p className="text-xs font-black text-[#75c081] uppercase tracking-[0.3em] mt-2">Inventory & Manufacturing Control</p>
         </div>
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-10 border border-[#A8BF75]/20">
-        <h2 className="text-xl font-bold text-center text-[#0D0D0D] mb-8 font-brand">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-10 border border-[#2ca4c2]/30">
+        <h2 className="text-xl font-bold text-center text-[#205f64] mb-8 font-brand">
           Secure Access
         </h2>
         
@@ -47,27 +47,27 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           </div>}
           
           <div>
-            <label htmlFor="username" className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Email Address</label>
+            <label htmlFor="username" className="block text-xs font-bold text-[#205f64] uppercase tracking-wider mb-2">Email Address</label>
             <input
               id="username"
               type="email"
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="appearance-none block w-full px-4 py-3 border border-slate-200 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8EBF45] focus:border-[#8EBF45] sm:text-sm transition-all"
-              placeholder="operator@datlion.com"
+              className="appearance-none block w-full px-4 py-3 border border-slate-200 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#498e72] focus:border-[#498e72] sm:text-sm transition-all text-slate-800 font-medium"
+              placeholder="operator@bluamp.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password"className="block text-xs font-bold text-[#404040] uppercase tracking-wider mb-2">Password</label>
+            <label htmlFor="password" className="block text-xs font-bold text-[#205f64] uppercase tracking-wider mb-2">Password</label>
             <input
               id="password"
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="appearance-none block w-full px-4 py-3 border border-slate-200 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#8EBF45] focus:border-[#8EBF45] sm:text-sm transition-all"
+              className="appearance-none block w-full px-4 py-3 border border-slate-200 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#498e72] focus:border-[#498e72] sm:text-sm transition-all text-slate-800 font-medium"
               placeholder="••••••••"
             />
           </div>
@@ -76,7 +76,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-sm font-black uppercase tracking-widest text-[#0D0D0D] bg-[#8EBF45] hover:bg-[#658C3E] hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8EBF45] disabled:bg-slate-300 disabled:cursor-not-allowed transition-all transform active:scale-95"
+              className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-sm font-black uppercase tracking-widest text-white bg-[#498e72] hover:bg-[#205f64] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#498e72] disabled:bg-slate-300 disabled:cursor-not-allowed transition-all transform active:scale-95 font-brand"
             >
               {isLoading ? 'Authenticating...' : 'Sign In'}
             </button>
