@@ -502,6 +502,7 @@ const App: React.FC = () => {
           companyProfiles={companyProfiles}
           setView={setView}
           setInvoiceDraft={setInvoiceDraft}
+          testResults={testResults}
         />;
       case 'storage':
         return <StorageManager 

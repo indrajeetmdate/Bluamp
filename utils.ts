@@ -1,5 +1,5 @@
 
-import type { FinishedGood, Recipe } from './types';
+import type { FinishedGood, Recipe, ReceivedGood, TestResult } from './types';
 
 // Timestamp cutoff for when we switched ID generation logic..
 // Items created BEFORE this timestamp will use the old legacy logic to preserve history.
@@ -179,5 +179,108 @@ export const getDueDateBadgeInfo = (dueDateStr?: string): DueDateBadgeInfo | nul
       dotColor: 'bg-slate-400',
     };
   }
+};
+
+export const normalizeUnitId = (unitId: string, batchId?: string): string => {
+  if (!unitId) return '';
+  const clean = unitId.trim();
+  if (batchId && !clean.startsWith(batchId)) {
+    return `${batchId}-${clean}`;
+  }
+  return clean;
+};
+
+export const getUnitSerialsMap = (
+  good: FinishedGood,
+  unitId: string,
+  allUnitIds?: string[]
+): { [receivedGoodId: string]: string[] } => {
+  const normId = normalizeUnitId(unitId);
+
+  // 1. Preferred: Check unitComponentMap
+  if (good.unitComponentMap && good.unitComponentMap[normId]) {
+    return good.unitComponentMap[normId];
+  }
+  if (good.unitComponentMap && good.unitComponentMap[unitId]) {
+    return good.unitComponentMap[unitId];
+  }
+
+  // 2. Backward-Compatibility Fallback for legacy records without unitComponentMap:
+  const result: { [receivedGoodId: string]: string[] } = {};
+  if (!good.consumedSerials) return result;
+
+  let unitIndex = 0;
+  if (allUnitIds && allUnitIds.length > 0) {
+    const foundIdx = allUnitIds.findIndex(id => id === normId || id === unitId);
+    if (foundIdx >= 0) unitIndex = foundIdx;
+  } else {
+    const match = unitId.match(/-(\d+)$/);
+    if (match) unitIndex = Math.max(0, parseInt(match[1], 10) - 1);
+  }
+
+  const totalUnits = Math.max(1, good.quantity);
+
+  for (const rgId in good.consumedSerials) {
+    const serialList = good.consumedSerials[rgId] || [];
+    if (serialList.length === 0) continue;
+
+    const perUnitCount = Math.floor(serialList.length / totalUnits);
+    if (perUnitCount > 0) {
+      const startIdx = unitIndex * perUnitCount;
+      const endIdx = (unitIndex === totalUnits - 1) ? serialList.length : startIdx + perUnitCount;
+      result[rgId] = serialList.slice(startIdx, endIdx);
+    } else {
+      result[rgId] = serialList;
+    }
+  }
+
+  return result;
+};
+
+export const getSerialParentGoodId = (
+  serialNumber: string,
+  finishedGood?: FinishedGood,
+  testResults?: TestResult[],
+  receivedGoods?: ReceivedGood[]
+): string | null => {
+  const cleanSerial = serialNumber.trim();
+  if (!cleanSerial) return null;
+
+  // 1. Check unitComponentMap if available
+  if (finishedGood?.unitComponentMap) {
+    for (const uId in finishedGood.unitComponentMap) {
+      const compMap = finishedGood.unitComponentMap[uId];
+      for (const rgId in compMap) {
+        if (compMap[rgId].some(s => s.trim().toLowerCase() === cleanSerial.toLowerCase())) {
+          return rgId;
+        }
+      }
+    }
+  }
+
+  // 2. Check consumedSerials
+  if (finishedGood?.consumedSerials) {
+    for (const rgId in finishedGood.consumedSerials) {
+      if (finishedGood.consumedSerials[rgId].some(s => s.trim().toLowerCase() === cleanSerial.toLowerCase())) {
+        return rgId;
+      }
+    }
+  }
+
+  // 3. Check testResults
+  if (testResults && testResults.length > 0) {
+    const tr = testResults.find(r => r.serialNumber.trim().toLowerCase() === cleanSerial.toLowerCase());
+    if (tr?.receivedGoodId) {
+      return tr.receivedGoodId;
+    }
+  }
+
+  // 4. Check existing receivedGoods
+  if (receivedGoods && receivedGoods.length > 0) {
+    const rg = receivedGoods.find(g => (g.serials || []).some(s => s.trim().toLowerCase() === cleanSerial.toLowerCase()));
+    if (rg) return rg.id;
+  }
+
+  return null;
 };
 

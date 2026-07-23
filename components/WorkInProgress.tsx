@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { WIPItem, ReceivedGood, Recipe, FinishedGood, RepairItem, TestResult, CompanyProfile, UnitMetadata } from '../types';
+import type { WIPItem, ReceivedGood, Recipe, FinishedGood, RepairItem, TestResult, CompanyProfile, UnitMetadata, RepairSwapEntry } from '../types';
 import Modal from './Modal';
 import { PlusIcon } from './icons/PlusIcon';
 import { TrashIcon } from './icons/TrashIcon';
@@ -8,7 +8,7 @@ import { RefreshCw, Printer, ChevronUp, ChevronDown } from './invoices/Icons';
 import { SearchIcon } from './icons/SearchIcon';
 import { ArrowRightIcon } from './icons/ArrowRightIcon';
 import { SpannerIcon } from './icons/SpannerIcon';
-import { generateUnitIds } from '../utils';
+import { generateUnitIds, getSerialParentGoodId, normalizeUnitId } from '../utils';
 
 // SearchableSelect Component
 interface SearchableSelectProps {
@@ -634,6 +634,14 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
 
         // Check if it's a normal WIP item
         const isWip = wipItems.some(w => w.id === wipItemId);
+        const repairItem = repairItems.find(r => r.id === wipItemId);
+        let targetFG: FinishedGood | undefined = undefined;
+        if (repairItem) {
+            targetFG = finishedGoods.find(fg => fg.id === repairItem.finishedGoodId);
+        }
+
+        // Find parent batch ID for damagedSerial
+        const parentGoodId = getSerialParentGoodId(damagedSerial, targetFG, testResults, receivedGoods) || 'RESTORED-BATCH';
 
         if (isWip) {
             setWipItems(prev => prev.map(w => {
@@ -647,61 +655,111 @@ const WorkInProgress: React.FC<WorkInProgressProps> = ({ wipItems, setWipItems, 
                 }
                 return w;
             }));
-        } else {
+        } else if (repairItem) {
             // It's a Repair Item - Update Finished Goods Data
-            const repairItem = repairItems.find(r => r.id === wipItemId);
-            if (repairItem) {
-                setFinishedGoods(prev => prev.map(fg => {
-                    if (fg.id === repairItem.finishedGoodId) {
-                        const newFG = { ...fg };
+            setFinishedGoods(prev => prev.map(fg => {
+                if (fg.id === repairItem.finishedGoodId) {
+                    const newFG = { ...fg };
 
-                        // 1. Update Aggregate Consumed Serials
-                        if (newFG.consumedSerials) {
-                            const newConsumed = { ...newFG.consumedSerials };
-                            for (const bid in newConsumed) {
-                                if (newConsumed[bid].includes(damagedSerial)) {
-                                    newConsumed[bid] = newConsumed[bid].filter(s => s !== damagedSerial);
-                                }
+                    // 1. Update Aggregate Consumed Serials
+                    if (newFG.consumedSerials) {
+                        const newConsumed = { ...newFG.consumedSerials };
+                        for (const bid in newConsumed) {
+                            if (newConsumed[bid].includes(damagedSerial)) {
+                                newConsumed[bid] = newConsumed[bid].filter(s => s !== damagedSerial);
                             }
-                            newConsumed[replacementBatchId] = [...(newConsumed[replacementBatchId] || []), replacementSerial];
-                            newFG.consumedSerials = newConsumed;
                         }
-
-                        // 2. Update Unit Component Map (Precise Traceability)
-                        if (newFG.unitComponentMap && newFG.unitComponentMap[repairItem.unitId]) {
-                            const newMap = { ...newFG.unitComponentMap };
-                            const unitComponents = { ...newMap[repairItem.unitId] };
-
-                            for (const bid in unitComponents) {
-                                if (unitComponents[bid].includes(damagedSerial)) {
-                                    unitComponents[bid] = unitComponents[bid].filter(s => s !== damagedSerial);
-                                }
-                            }
-                            unitComponents[replacementBatchId] = [...(unitComponents[replacementBatchId] || []), replacementSerial];
-
-                            newMap[repairItem.unitId] = unitComponents;
-                            newFG.unitComponentMap = newMap;
-                        }
-
-                        return newFG;
+                        newConsumed[replacementBatchId] = [...(newConsumed[replacementBatchId] || []), replacementSerial];
+                        newFG.consumedSerials = newConsumed;
                     }
-                    return fg;
-                }));
-            }
+
+                    // 2. Update Unit Component Map (Precise Traceability)
+                    const normUnitId = normalizeUnitId(repairItem.unitId);
+                    if (newFG.unitComponentMap && (newFG.unitComponentMap[normUnitId] || newFG.unitComponentMap[repairItem.unitId])) {
+                        const targetKey = newFG.unitComponentMap[normUnitId] ? normUnitId : repairItem.unitId;
+                        const newMap = { ...newFG.unitComponentMap };
+                        const unitComponents = { ...(newMap[targetKey] || {}) };
+
+                        for (const bid in unitComponents) {
+                            if (unitComponents[bid].includes(damagedSerial)) {
+                                unitComponents[bid] = unitComponents[bid].filter(s => s !== damagedSerial);
+                            }
+                        }
+                        unitComponents[replacementBatchId] = [...(unitComponents[replacementBatchId] || []), replacementSerial];
+
+                        newMap[targetKey] = unitComponents;
+                        newFG.unitComponentMap = newMap;
+                    }
+
+                    // 3. Log Repair Swap History
+                    const swapEntry: RepairSwapEntry = {
+                        unitId: repairItem.unitId,
+                        damagedSerial,
+                        replacementSerial,
+                        timestamp: Date.now(),
+                        swappedBy: currentUser?.name || 'Technician'
+                    };
+                    newFG.repairSwapHistory = [...(newFG.repairSwapHistory || []), swapEntry];
+
+                    return newFG;
+                }
+                return fg;
+            }));
         }
 
-        setReceivedGoods(prev => prev.map(g => {
-            if (g.id === replacementBatchId) {
-                return {
-                    ...g,
-                    quantity: g.quantity - 1,
-                    serials: g.serials.filter(s => s !== replacementSerial)
-                };
-            }
-            return g;
-        }));
+        // Return damagedSerial to Received Goods stock & Deduct replacementSerial
+        setReceivedGoods(prev => {
+            let parentFound = false;
+            const updated = prev.map(g => {
+                let ng = { ...g };
+                // Deduct replacementSerial
+                if (g.id === replacementBatchId) {
+                    const remainingSerials = (g.serials || []).filter(s => s !== replacementSerial);
+                    ng = {
+                        ...ng,
+                        quantity: Math.max(0, (g.quantity || 1) - 1),
+                        serials: remainingSerials
+                    };
+                }
+                // Return damagedSerial to parent batch if matched
+                if (g.id === parentGoodId) {
+                    parentFound = true;
+                    const existingSet = new Set(ng.serials || []);
+                    if (!existingSet.has(damagedSerial)) {
+                        const returnedSerials = [...(ng.serials || []), damagedSerial];
+                        ng = {
+                            ...ng,
+                            serials: returnedSerials,
+                            quantity: returnedSerials.length
+                        };
+                    }
+                }
+                return ng;
+            });
 
-        addLogEntry('WIP Replacement', `Damaged serial ${damagedSerial} replaced by ${replacementSerial} in ${isWip ? 'production' : 'repair'} batch.`);
+            // If parent batch was NOT found in receivedGoods (e.g. deleted), create a restored batch!
+            if (!parentFound && parentGoodId) {
+                const restoredBatch: ReceivedGood = {
+                    id: parentGoodId,
+                    name: `Restored Batch (${parentGoodId.substring(0, 12)})`,
+                    category: 'Cell',
+                    makeModel: 'Restored Component',
+                    supplier: 'Restored Inventory',
+                    invoiceNumber: 'RESTORED-INV',
+                    quantity: 1,
+                    damagedCount: 0,
+                    status: 'ND',
+                    timestamp: Date.now(),
+                    serials: [damagedSerial],
+                    notes: `Auto-restored batch for damaged serial ${damagedSerial} replaced in repair`
+                };
+                updated.push(restoredBatch);
+            }
+
+            return updated;
+        });
+
+        addLogEntry('WIP Replacement', `Damaged serial ${damagedSerial} replaced by ${replacementSerial} in ${isWip ? 'production' : 'repair'} batch. Damaged serial returned to raw material stock.`);
 
         // Update local review state if open
         setActiveWipItem(prev => {

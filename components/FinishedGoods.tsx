@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import type { FinishedGood, Recipe, ReceivedGood, RepairItem, CompanyProfile, ExtractedInvoice, UnitMetadata } from '../types';
+import type { FinishedGood, Recipe, ReceivedGood, RepairItem, CompanyProfile, ExtractedInvoice, UnitMetadata, TestResult, DeliveryHistoryEntry } from '../types';
 import { EMPTY_INVOICE } from '../types';
 import Modal from './Modal';
 import { SpannerIcon } from './icons/SpannerIcon';
@@ -8,7 +8,7 @@ import { ArrowRightIcon } from './icons/ArrowRightIcon';
 import { PencilIcon } from './icons/PencilIcon';
 import { TruckIcon } from './icons/TruckIcon';
 import { QrCodeIcon } from './icons/QrCodeIcon';
-import { generateBatchId, generateUnitIds } from '../utils';
+import { generateBatchId, generateUnitIds, getUnitSerialsMap, getSerialParentGoodId, normalizeUnitId } from '../utils';
 import { Printer, RotateCcw, CheckCircle } from './invoices/Icons';
 import ProductLabel from './ProductLabel';
 
@@ -23,11 +23,12 @@ interface FinishedGoodsProps {
     companyProfiles: CompanyProfile[];
     setView?: (view: any) => void;
     setInvoiceDraft?: (draft: ExtractedInvoice) => void;
+    testResults?: TestResult[];
 }
 
 type FilterStatus = 'all' | 'ready' | 'delivered' | 'dismantled';
 
-const FinishedGoods: React.FC<FinishedGoodsProps> = ({ finishedGoods, setFinishedGoods, recipes, receivedGoods, setReceivedGoods, setRepairItems, addLogEntry, companyProfiles, setView, setInvoiceDraft }) => {
+const FinishedGoods: React.FC<FinishedGoodsProps> = ({ finishedGoods, setFinishedGoods, recipes, receivedGoods, setReceivedGoods, setRepairItems, addLogEntry, companyProfiles, setView, setInvoiceDraft, testResults = [] }) => {
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [isSpecModalOpen, setIsSpecModalOpen] = useState(false);
     const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -340,65 +341,136 @@ const FinishedGoods: React.FC<FinishedGoodsProps> = ({ finishedGoods, setFinishe
             return;
         }
 
-        if (!window.confirm(`DANGER: Are you sure you want to DISMANTLE unit ${unitId}?\n\nThis will:\n1. Mark this unit as VOID/DISMANTLED.\n2. Return its ingredients to Raw Materials.\n3. Make input serials available for testing again.`)) {
+        if (!window.confirm(`DANGER: Are you sure you want to DISMANTLE unit ${unitId}?\n\nThis will:\n1. Mark this unit as VOID/DISMANTLED.\n2. Return its exact original cell serials to Raw Materials stock.\n3. Preserve all original test records and invoice traceability.`)) {
             return;
         }
 
         const recipe = recipes.find(r => r.id === selectedGood.recipeId);
         if (!recipe) return alert("Error: Recipe not found. Cannot determine ingredients to return.");
 
-        // 1. Identify Ingredients to Return
-        const serialsToReturn: Record<string, string[]> = {};
-        const currentConsumed = JSON.parse(JSON.stringify(selectedGood.consumedSerials || {}));
+        const allUnitIds = generateUnitIds(selectedGood, finishedGoods, recipes);
+        const unitSerialsMap = getUnitSerialsMap(selectedGood, unitId, allUnitIds);
 
-        // Logic: Siphon serials back.
-        // NOTE: This assumes LIFO logic on the consumed array. 
-        // If specific input-output mapping isn't tracked, we just return the last used serials.
-        recipe.components.forEach(comp => {
-            if (currentConsumed[comp.receivedGoodId] && Array.isArray(currentConsumed[comp.receivedGoodId])) {
-                const extracted = currentConsumed[comp.receivedGoodId].splice(-comp.quantityPerUnit);
-                serialsToReturn[comp.receivedGoodId] = extracted;
-            }
-        });
-
-        // 2. Update Received Goods (Return stock)
-        setReceivedGoods(prevGoods => {
-            return prevGoods.map(rg => {
-                const comp = recipe.components.find(c => c.receivedGoodId === rg.id);
-                if (comp) {
-                    const returningSerials = serialsToReturn[rg.id] || [];
-                    return {
-                        ...rg,
-                        quantity: rg.quantity + comp.quantityPerUnit,
-                        serials: [...(rg.serials || []), ...returningSerials]
-                    };
+        // Group serials to return by their exact parent batch ID
+        const serialsToReturnPerBatch: Record<string, string[]> = {};
+        for (const rgId in unitSerialsMap) {
+            const list = unitSerialsMap[rgId] || [];
+            list.forEach(serial => {
+                const parentId = getSerialParentGoodId(serial, selectedGood, testResults, receivedGoods) || rgId;
+                if (!serialsToReturnPerBatch[parentId]) {
+                    serialsToReturnPerBatch[parentId] = [];
                 }
-                return rg;
+                if (!serialsToReturnPerBatch[parentId].includes(serial)) {
+                    serialsToReturnPerBatch[parentId].push(serial);
+                }
             });
+        }
+
+        // Return stock to received_goods (with Auto-Restoration fallback for deleted batches)
+        setReceivedGoods(prevGoods => {
+            const updatedGoods = [...prevGoods];
+            const createdRestoredBatches: ReceivedGood[] = [];
+
+            for (const batchId in serialsToReturnPerBatch) {
+                const returningSerials = serialsToReturnPerBatch[batchId];
+                if (returningSerials.length === 0) continue;
+
+                const idx = updatedGoods.findIndex(g => g.id === batchId);
+                if (idx >= 0) {
+                    const rg = updatedGoods[idx];
+                    const existingSet = new Set(rg.serials || []);
+                    const newSerials = returningSerials.filter(s => !existingSet.has(s));
+                    updatedGoods[idx] = {
+                        ...rg,
+                        serials: [...(rg.serials || []), ...newSerials],
+                        quantity: (rg.serials || []).length + newSerials.length
+                    };
+                } else {
+                    // Batch was deleted from raw materials - recreate it automatically!
+                    const restoredBatch: ReceivedGood = {
+                        id: batchId,
+                        name: `Restored Batch (${batchId.substring(0, 12)})`,
+                        category: 'Cell',
+                        makeModel: 'Restored Component',
+                        supplier: 'Restored Inventory',
+                        invoiceNumber: 'RESTORED-INV',
+                        quantity: returningSerials.length,
+                        damagedCount: 0,
+                        status: 'ND',
+                        timestamp: Date.now(),
+                        serials: returningSerials,
+                        notes: `Auto-restored batch for serials returning from dismantled unit ${unitId}`
+                    };
+                    createdRestoredBatches.push(restoredBatch);
+                }
+            }
+
+            return [...updatedGoods, ...createdRestoredBatches];
         });
 
-        // 3. Update Finished Goods (Mark as Dismantled)
-        // We do NOT decrement quantity to preserve sequence numbering for other units.
-        // We ADD to dismantledUnitIds.
+        // Clean up Unit Map and consumed serials in FinishedGood
+        const currentConsumed = JSON.parse(JSON.stringify(selectedGood.consumedSerials || {}));
+        const currentUnitMap = JSON.parse(JSON.stringify(selectedGood.unitComponentMap || {}));
+
+        const normId = normalizeUnitId(unitId);
+        delete currentUnitMap[normId];
+        delete currentUnitMap[unitId];
+
+        for (const batchId in serialsToReturnPerBatch) {
+            const toRemove = new Set(serialsToReturnPerBatch[batchId]);
+            if (currentConsumed[batchId] && Array.isArray(currentConsumed[batchId])) {
+                currentConsumed[batchId] = currentConsumed[batchId].filter((s: string) => !toRemove.has(s));
+            }
+        }
 
         const updatedDismantled = [...(selectedGood.dismantledUnitIds || []), unitId];
-
-        // Also remove it from Repair if it was there
         const updatedInRepair = (selectedGood.inRepairUnitIds || []).filter(id => id !== unitId);
 
-        const updatedFinishedGood = {
+        const updatedFinishedGood: FinishedGood = {
             ...selectedGood,
-            consumedSerials: currentConsumed, // Updated array with serials removed
+            consumedSerials: currentConsumed,
+            unitComponentMap: currentUnitMap,
             inRepairUnitIds: updatedInRepair,
             dismantledUnitIds: updatedDismantled
         };
 
-        setFinishedGoods(prev => {
-            return prev.map(fg => fg.id === selectedGood.id ? updatedFinishedGood : fg);
-        });
-
+        setFinishedGoods(prev => prev.map(fg => fg.id === selectedGood.id ? updatedFinishedGood : fg));
         setSelectedGood(updatedFinishedGood);
-        addLogEntry("Dismantled Unit", `Dismantled ${unitId}. Ingredients returned to stock. Unit marked as void.`);
+        addLogEntry("Dismantled Unit", `Dismantled ${unitId}. Serials safely returned to raw material stock with full parent traceability.`);
+    };
+
+    const handleReturnDeliveryToFactory = (unitId: string) => {
+        if (!selectedGood) return;
+        const reason = window.prompt(`Reason for returning unit ${unitId} to factory (e.g., Customer Warranty Servicing, Transit Damage):`, "Customer Warranty Return");
+        if (reason === null) return;
+
+        const normId = normalizeUnitId(unitId);
+        const customerName = (selectedGood.unitDeliveries || {})[normId] || (selectedGood.unitDeliveries || {})[unitId] || 'Customer';
+
+        const updatedDeliveries = { ...(selectedGood.unitDeliveries || {}) };
+        delete updatedDeliveries[normId];
+        delete updatedDeliveries[unitId];
+
+        const historyEntry: DeliveryHistoryEntry = {
+            unitId: normId,
+            customerName,
+            deliveredAt: Date.now(),
+            returnedAt: Date.now(),
+            returnReason: reason,
+            operator: 'System'
+        };
+
+        const updatedHistory = [...(selectedGood.deliveryHistory || []), historyEntry];
+
+        const updatedFinishedGood: FinishedGood = {
+            ...selectedGood,
+            unitDeliveries: updatedDeliveries,
+            deliveryHistory: updatedHistory
+        };
+
+        setFinishedGoods(prev => prev.map(fg => fg.id === selectedGood.id ? updatedFinishedGood : fg));
+        setSelectedGood(updatedFinishedGood);
+        addLogEntry("Unit Delivery Reversed", `Returned unit ${unitId} from customer ${customerName} to Factory Stock. Reason: ${reason}`);
     };
 
     const handleDeliverUnit = (unitId: string, companyName: string) => {
@@ -741,8 +813,17 @@ const FinishedGoods: React.FC<FinishedGoodsProps> = ({ finishedGoods, setFinishe
                                                     </div>
                                                 )}
                                                 {deliveredTo && (
-                                                    <div className="mt-1 flex items-center text-xs text-green-700 font-semibold bg-green-50 border border-green-200 px-2 py-0.5 rounded w-fit">
-                                                        <TruckIcon className="w-3 h-3 mr-1" /> Delivered to {deliveredTo}
+                                                    <div className="mt-1 flex items-center gap-2">
+                                                        <div className="flex items-center text-xs text-green-700 font-semibold bg-green-50 border border-green-200 px-2 py-0.5 rounded w-fit">
+                                                            <TruckIcon className="w-3 h-3 mr-1" /> Delivered to {deliveredTo}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleReturnDeliveryToFactory(id)}
+                                                            className="text-xs bg-amber-50 border border-amber-300 text-amber-800 hover:bg-amber-100 px-2 py-0.5 rounded flex items-center font-bold transition-colors"
+                                                            title="Return unit to factory stock (Customer RMA)"
+                                                        >
+                                                            <RotateCcw className="w-3 h-3 mr-1" /> Return to Factory
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>

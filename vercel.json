@@ -3,6 +3,10 @@
     {
       "path": "/api/backup",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/slack-daily-tasks",
+      "schedule": "0 6 * * *"
     }
   ]
 }

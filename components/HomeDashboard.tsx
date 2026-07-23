@@ -41,6 +41,33 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
     const [invoiceStats, setInvoiceStats] = useState({ total: 0, today: 0, thisWeek: 0, totalValue: 0, todayValue: 0 });
     const [expenseStats, setExpenseStats] = useState({ total: 0, today: 0, todayAmount: 0 });
     const [recentInvoices, setRecentInvoices] = useState<ExtractedInvoice[]>([]);
+    const [isPostingSlack, setIsPostingSlack] = useState(false);
+    const [slackToast, setSlackToast] = useState<string | null>(null);
+
+    const handleSendSlackTasks = async () => {
+        setIsPostingSlack(true);
+        setSlackToast(null);
+        try {
+            const res = await fetch('/api/slack-daily-tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user: 'all' })
+            });
+            const data = await res.json();
+            if (data.success && !data.warning) {
+                setSlackToast('✅ Posted to Slack!');
+            } else if (data.warning) {
+                setSlackToast(`⚠️ ${data.warning}`);
+            } else {
+                setSlackToast(`❌ ${data.error || 'Failed'}`);
+            }
+        } catch (err: any) {
+            setSlackToast(`❌ Error: ${err.message}`);
+        } finally {
+            setIsPostingSlack(false);
+            setTimeout(() => setSlackToast(null), 5000);
+        }
+    };
 
     useEffect(() => {
         const fetch = async () => {
@@ -170,13 +197,28 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                         </p>
                     </div>
 
-                    <button
-                        onClick={() => setView('employee_tasks')}
-                        className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
-                    >
-                        <span>Manage Tasks</span>
-                        <span>→</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {slackToast && (
+                            <span className="text-[11px] font-bold px-2 py-1 bg-slate-100 rounded border border-slate-200 text-slate-800">
+                                {slackToast}
+                            </span>
+                        )}
+                        <button
+                            onClick={handleSendSlackTasks}
+                            disabled={isPostingSlack}
+                            className="px-3 py-1.5 bg-[#4A154B] hover:bg-[#3F0E40] text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                            title="Post pending employee tasks to Slack channel"
+                        >
+                            <span>📢 Post to Slack</span>
+                        </button>
+                        <button
+                            onClick={() => setView('employee_tasks')}
+                            className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+                        >
+                            <span>Manage Tasks</span>
+                            <span>→</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* NON-ADMIN EMPLOYEE VIEW: PERSONAL TASK LIST */}
@@ -304,7 +346,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                                     <div className="flex justify-between items-center border-b border-slate-200 pb-2">
                                                         <span className="text-xs font-black text-slate-800 flex items-center gap-1.5">
                                                             <span className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px]">
-                                                                {emp.charAt(0).toUpperCase()}
+                                                                {String(emp).charAt(0).toUpperCase()}
                                                             </span>
                                                             {emp}
                                                         </span>

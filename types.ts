@@ -147,6 +147,23 @@ export interface UnitMetadata {
   description?: string;
 }
 
+export interface DeliveryHistoryEntry {
+  unitId: string;
+  customerName: string;
+  deliveredAt: number;
+  returnedAt: number;
+  returnReason?: string;
+  operator?: string;
+}
+
+export interface RepairSwapEntry {
+  unitId: string;
+  damagedSerial: string;
+  replacementSerial: string;
+  timestamp: number;
+  swappedBy?: string;
+}
+
 export interface FinishedGood {
   id: string;
   recipeId: string;
@@ -156,6 +173,8 @@ export interface FinishedGood {
   qualityRemarks: string;
   deliveredTo?: string;
   unitDeliveries?: { [unitId: string]: string };
+  deliveryHistory?: DeliveryHistoryEntry[];
+  repairSwapHistory?: RepairSwapEntry[];
   inRepairUnitIds?: string[];
   repairedUnitIds?: string[];
   dismantledUnitIds?: string[];

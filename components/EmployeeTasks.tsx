@@ -97,6 +97,34 @@ export const EmployeeTasks: React.FC<EmployeeTasksProps> = ({
   const completedTasksCount = validTasks.filter(t => t.completed).length;
   const overallCompletionRate = totalTasksCount > 0 ? Math.round((completedTasksCount / totalTasksCount) * 100) : 0;
 
+  const [isBroadcastingSlack, setIsBroadcastingSlack] = useState(false);
+  const [slackStatusMsg, setSlackStatusMsg] = useState<string | null>(null);
+
+  const handleSendSlackDigest = async () => {
+    setIsBroadcastingSlack(true);
+    setSlackStatusMsg(null);
+    try {
+      const res = await fetch('/api/slack-daily-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: selectedUserFilter })
+      });
+      const data = await res.json();
+      if (data.success && !data.warning) {
+        setSlackStatusMsg('✅ Daily tasks posted to Slack successfully!');
+      } else if (data.warning) {
+        setSlackStatusMsg(`⚠️ ${data.warning}`);
+      } else {
+        setSlackStatusMsg(`❌ Error: ${data.error || 'Failed to send to Slack'}`);
+      }
+    } catch (err: any) {
+      setSlackStatusMsg(`❌ Connection Error: ${err.message}`);
+    } finally {
+      setIsBroadcastingSlack(false);
+      setTimeout(() => setSlackStatusMsg(null), 6000);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12">
       {/* HEADER CARD */}
@@ -146,9 +174,20 @@ export const EmployeeTasks: React.FC<EmployeeTasksProps> = ({
           </select>
         </div>
 
-        <div className="text-xs text-slate-500 font-medium flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-[#8EBF45]"></span>
-          {isAdmin ? 'Admin Mode: You can add, edit, or delete task items.' : 'Employee Mode: You can toggle task completion.'}
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          {slackStatusMsg && (
+            <span className="text-xs font-bold px-2.5 py-1 bg-slate-100 rounded-lg border border-slate-300 text-slate-800">
+              {slackStatusMsg}
+            </span>
+          )}
+          <button
+            onClick={handleSendSlackDigest}
+            disabled={isBroadcastingSlack}
+            className="flex items-center gap-1.5 bg-[#4A154B] hover:bg-[#3F0E40] text-white text-xs font-extrabold px-3 py-2 rounded-lg shadow-sm transition-all disabled:opacity-50"
+            title="Post 11:30 AM task digest to Slack immediately"
+          >
+            {isBroadcastingSlack ? 'Sending...' : '📢 Send Slack Digest'}
+          </button>
         </div>
       </div>
 
