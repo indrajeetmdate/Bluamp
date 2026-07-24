@@ -40,25 +40,9 @@ const isToday = (ts: number) => {
 const HomeDashboard: React.FC<HomeDashboardProps> = ({
     receivedGoods, setReceivedGoods, wipItems, finishedGoods, recipes, suppliesRecords, logs, currentUser, setView, employeeTasks = [], onToggleTask
 }) => {
-    // Stock Threshold Overrides State (0 - 100%)
-    const [thresholdOverrides, setThresholdOverrides] = useLocalStorage<Record<string, number>>('bluamp_stock_thresholds', {});
-    const [showAllThresholdsModal, setShowAllThresholdsModal] = useState(false);
-
     const lowStockAlerts = useMemo(() => {
-        return getLowStockAlerts(receivedGoods, thresholdOverrides);
-    }, [receivedGoods, thresholdOverrides]);
-
-    const allStockItems = useMemo(() => {
-        return (receivedGoods || []).map(item => getItemStockAlertInfo(item, thresholdOverrides));
-    }, [receivedGoods, thresholdOverrides]);
-
-    const handleThresholdChange = (itemId: string, newPercent: number) => {
-        const val = Math.max(0, Math.min(100, newPercent));
-        setThresholdOverrides(prev => ({ ...prev, [itemId]: val }));
-        if (setReceivedGoods) {
-            setReceivedGoods(prev => prev.map(item => item.id === itemId ? { ...item, lowStockThresholdPercent: val } : item));
-        }
-    };
+        return getLowStockAlerts(receivedGoods);
+    }, [receivedGoods]);
 
     // Fetch invoice & expense counts from Supabase (they aren't passed as props)
     const [invoiceStats, setInvoiceStats] = useState({ total: 0, today: 0, thisWeek: 0, totalValue: 0, todayValue: 0 });
@@ -204,7 +188,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                 ))}
             </div>
 
-            {/* LOW STOCK NOTIFICATIONS BANNER & THRESHOLD MANAGER */}
+            {/* LOW STOCK NOTIFICATIONS BANNER */}
             <div className={`rounded-2xl p-5 shadow-sm border transition-all ${
                 lowStockAlerts.length > 0
                     ? 'bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-orange-500/10 border-amber-300/60'
@@ -232,17 +216,17 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                             </h3>
                             <p className="text-xs text-slate-500 font-medium mt-0.5">
                                 {lowStockAlerts.length > 0
-                                    ? 'Items logged in inventory that have fallen below their set safety threshold percentage (0–100%).'
-                                    : 'All inventory items are currently above their configured minimum stock thresholds.'}
+                                    ? 'Real-time inventory alerts for raw materials below minimum safety thresholds.'
+                                    : 'All inventory items are currently above their configured safety thresholds.'}
                             </p>
                         </div>
                     </div>
 
                     <button
-                        onClick={() => setShowAllThresholdsModal(!showAllThresholdsModal)}
-                        className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-sm"
+                        onClick={() => setView && setView('received')}
+                        className="px-3.5 py-1.5 bg-[#205f64] hover:bg-[#18484c] text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-sm"
                     >
-                        <span>⚙️ {showAllThresholdsModal ? 'Close Threshold Manager' : 'Manage Thresholds'}</span>
+                        <span>Manage Inventory & Thresholds ➔</span>
                     </button>
                 </div>
 
@@ -272,7 +256,7 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                     {/* STOCK PROGRESS BAR */}
                                     <div className="my-3 space-y-1">
                                         <div className="flex justify-between text-xs font-semibold">
-                                            <span className="text-slate-600">Current / Original Entry</span>
+                                            <span className="text-slate-600">Current Stock</span>
                                             <span className={item.isOutOfStock ? 'text-rose-600 font-extrabold' : 'text-amber-700 font-bold'}>
                                                 {item.quantity} / {item.initialQuantity} units ({item.percentRemaining}%)
                                             </span>
@@ -292,105 +276,29 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({
                                     </div>
                                 </div>
 
-                                {/* THRESHOLD CONTROL SLIDER (0-100%) */}
-                                <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-                                    <div className="flex justify-between items-center text-xs">
-                                        <span className="font-bold text-slate-700">Alert Threshold (%):</span>
-                                        <div className="flex items-center gap-1">
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                value={item.thresholdPercent}
-                                                onChange={(e) => handleThresholdChange(item.id, Number(e.target.value))}
-                                                className="w-14 px-1.5 py-0.5 border border-slate-300 rounded text-center text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#205f64]"
-                                            />
-                                            <span className="font-bold text-slate-600">%</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="100"
-                                            value={item.thresholdPercent}
-                                            onChange={(e) => handleThresholdChange(item.id, Number(e.target.value))}
-                                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#205f64]"
-                                        />
-                                    </div>
-
-                                    <div className="flex justify-between items-center text-[10px] text-slate-500 font-medium">
-                                        <span>Triggers alert below <strong>{item.thresholdQty}</strong> units</span>
-                                        <button
-                                            onClick={() => setView('received')}
-                                            className="text-[#205f64] hover:text-[#498e72] font-bold underline transition-colors"
-                                        >
-                                            Inspect Inventory 📦
-                                        </button>
-                                    </div>
+                                <div className="mt-2 pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
+                                    <span className="text-slate-500 font-medium">
+                                        Safety Trigger: <strong className="text-slate-800">{item.thresholdPercent}%</strong> ({item.thresholdQty} units)
+                                    </span>
+                                    <button
+                                        onClick={() => setView && setView('received')}
+                                        className="text-[#205f64] hover:text-[#18484c] font-bold text-xs flex items-center gap-1 transition-colors"
+                                    >
+                                        Adjust in Raw Materials ➔
+                                    </button>
                                 </div>
                             </div>
                         ))}
                     </div>
-                ) : null}
-
-                {/* ALL THRESHOLDS MANAGER DRAWER */}
-                {showAllThresholdsModal && (
-                    <div className="mt-4 pt-4 border-t border-slate-200 space-y-4">
-                        <div className="flex justify-between items-center">
-                            <h4 className="text-xs font-black text-[#205f64] uppercase tracking-wider font-brand">
-                                Configured Minimum Stock Thresholds ({allStockItems.length} items)
-                            </h4>
-                            <span className="text-[10px] text-slate-500 font-medium">Sliders adjust alert trigger percentage (0% - 100%)</span>
-                        </div>
-                        {allStockItems.length === 0 ? (
-                            <p className="text-xs text-slate-500 italic bg-slate-50 p-3 rounded-lg">No raw material items registered in inventory.</p>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-1">
-                                {allStockItems.map(item => (
-                                    <div key={item.id} className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between">
-                                        <div>
-                                            <div className="flex justify-between items-start">
-                                                <span className="text-xs font-bold text-slate-800">{item.name}</span>
-                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                                    item.isLowStock ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
-                                                }`}>
-                                                    {item.quantity} / {item.initialQuantity} units ({item.percentRemaining}%)
-                                                </span>
-                                            </div>
-                                            <span className="text-[10px] text-slate-500">{item.category} {item.makeModel ? `• ${item.makeModel}` : ''}</span>
-                                        </div>
-
-                                        <div className="mt-2 pt-2 border-t border-slate-200/60 space-y-1">
-                                            <div className="flex justify-between items-center text-[11px]">
-                                                <span className="text-slate-600 font-medium">Alert Trigger:</span>
-                                                <span className="font-bold text-slate-800">{item.thresholdPercent}% ({item.thresholdQty} units)</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="range"
-                                                    min="0"
-                                                    max="100"
-                                                    value={item.thresholdPercent}
-                                                    onChange={(e) => handleThresholdChange(item.id, Number(e.target.value))}
-                                                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#205f64]"
-                                                />
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    max="100"
-                                                    value={item.thresholdPercent}
-                                                    onChange={(e) => handleThresholdChange(item.id, Number(e.target.value))}
-                                                    className="w-12 px-1 py-0.5 text-center text-xs border rounded font-bold text-slate-800 focus:outline-none"
-                                                />
-                                                <span className="text-xs font-bold text-slate-600">%</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                ) : (
+                    <div className="bg-emerald-50/60 rounded-xl p-4 border border-emerald-200 flex items-center justify-between text-xs text-emerald-900">
+                        <span className="font-semibold">✨ All inventory stock levels are operating safely above minimum thresholds.</span>
+                        <button
+                            onClick={() => setView && setView('received')}
+                            className="font-bold text-[#205f64] hover:underline"
+                        >
+                            Open Raw Materials Operations ➔
+                        </button>
                     </div>
                 )}
             </div>
