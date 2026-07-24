@@ -165,15 +165,31 @@ async function processInvoice(userText: string, responseUrl: string) {
     
     User Request: "${userText}"`;
     
-        const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash",
-            contents: systemPrompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: aiAssistantSchema,
-                temperature: 0.1,
-            },
-        });
+        const models = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-2.0-flash'];
+        let response: any = null;
+        let lastErr: any = null;
+
+        for (const model of models) {
+            try {
+                response = await ai.models.generateContent({
+                    model,
+                    contents: systemPrompt,
+                    config: {
+                        responseMimeType: "application/json",
+                        responseSchema: aiAssistantSchema,
+                        temperature: 0.1,
+                    },
+                });
+                if (response?.text) break;
+            } catch (err: any) {
+                console.warn(`[Slack Invoice AI] Model ${model} failed, trying next:`, err.message);
+                lastErr = err;
+            }
+        }
+
+        if (!response || !response.text) {
+            throw lastErr || new Error('All Gemini models failed to generate content');
+        }
     
         const parsedData = cleanAndParseJSON(response.text || '{}');
         console.log('[Slack] AI Response:', JSON.stringify(parsedData));

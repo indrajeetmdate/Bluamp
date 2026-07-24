@@ -1,6 +1,25 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 
 const API_KEY = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+
+// Model priority order starting with Gemini 3.1 Flash Lite
+const MODELS = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-2.0-flash'];
+
+async function generateContentWithFallback(ai: GoogleGenAI, requestOptions: any) {
+    let lastError: any = null;
+    for (const model of MODELS) {
+        try {
+            return await ai.models.generateContent({
+                ...requestOptions,
+                model
+            });
+        } catch (err: any) {
+            console.warn(`[Gemini Proxy] Model ${model} failed, trying next. Error:`, err.message);
+            lastError = err;
+        }
+    }
+    throw lastError;
+}
 
 export default async function handler(req: any, res: any) {
     if (req.method !== 'POST') {
@@ -18,8 +37,7 @@ export default async function handler(req: any, res: any) {
 
         if (action === 'generateTextResponse') {
             const { prompt } = payload;
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.0-flash',
+            const response = await generateContentWithFallback(ai, {
                 contents: prompt,
                 config: { temperature: 0.7, maxOutputTokens: 2048 }
             });
@@ -28,8 +46,7 @@ export default async function handler(req: any, res: any) {
 
         if (action === 'extractInvoiceData') {
             const { fileBase64, mimeType, prompt, schema } = payload;
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.0-flash',
+            const response = await generateContentWithFallback(ai, {
                 contents: {
                     parts: [
                         { inlineData: { mimeType, data: fileBase64 } },
@@ -48,8 +65,7 @@ export default async function handler(req: any, res: any) {
 
         if (action === 'generateInvoiceFromText') {
             const { prompt, schema } = payload;
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.0-flash',
+            const response = await generateContentWithFallback(ai, {
                 contents: prompt,
                 config: {
                     responseMimeType: 'application/json',
